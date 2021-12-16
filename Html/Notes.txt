@@ -1,0 +1,16 @@
+https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/api-reference/wifi/esp_wifi.html
+
+
+include esp8266/include/esp_wifi.h
+
+esp_err_t esp_wifi_deauth_sta(uint16_t aid)
+deauthenticate all stations or associated id equals to aid
+
+Return
+ESP_OK: succeed
+ESP_ERR_WIFI_NOT_INIT: WiFi is not initialized by esp_wifi_init
+ESP_ERR_WIFI_NOT_STARTED: WiFi was not started by esp_wifi_start
+ESP_ERR_INVALID_ARG: invalid argument
+ESP_ERR_WIFI_MODE: WiFi mode is wrong
+Parameters
+aid: when aid is 0, deauthenticate all stations, otherwise deauthenticate station whose associated id is aid

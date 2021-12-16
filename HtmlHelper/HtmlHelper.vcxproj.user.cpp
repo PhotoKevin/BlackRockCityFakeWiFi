@@ -1,0 +1,7 @@
+const char *html = "ï»¿<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+"<Project ToolsVersion=\"Current\" xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\">"
+" <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|Win32'\">"
+" <LocalDebuggerCommandArguments>H:\Projects\PICProjectsUSB\BMWifi\HtmlHelper\HtmlHelper.vcxproj.user</LocalDebuggerCommandArguments>"
+" <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>"
+" </PropertyGroup>"
+"</Project>ÿ"

@@ -1,0 +1,72 @@
+body
+{
+   font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+.top
+{
+   font-size: 2em;
+   font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+   text-align: center;
+   // background: #7a7467;
+   background: #a9a395;
+   // background: #4e493d;
+   padding-bottom: 0.5em;
+   padding-top: 0.5em;
+}
+
+
+/* If screen width <= 700px */
+@media only screen and (max-width: 700px)
+{
+   body
+   {
+      font-size: 2em;
+      width: 750px;
+      background: red;
+   }
+
+   .top
+   {
+      font-size: 2em;
+   }
+}
+
+/* If screen width >= 700px */
+@media only screen and (min-width: 700px)
+{
+   body
+   {
+      font-size: 1.5em;
+      background: blue;
+      width: 750px;
+   }
+   .top
+   {
+      font-size: 2em;
+   }
+}
+
+
+.normal
+{
+   font-size: 1.5em;
+   font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+.main
+{
+   margin-top: 1em;
+   margin-bottom: 0.0em;
+   font-size: inherit;
+   font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+
+.answers
+{
+   margin-top: 1em;
+   margin-left: 5%;
+   align: center;
+
+}

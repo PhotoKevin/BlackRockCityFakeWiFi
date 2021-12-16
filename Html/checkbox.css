@@ -1,0 +1,31 @@
+input[type='checkbox'] 
+{
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+    vertical-align: middle;
+    outline: none;
+    font-size: inherit;
+    cursor: pointer;
+    width: 1.0em;
+    height: 1.0em;
+    background: white;
+    border-radius: 0.25em;
+    border: 0.125em solid #555;
+    top: -0.1em;
+    position: relative;
+}
+
+input[type='checkbox']:checked 
+{
+    background: #adf;
+}
+
+input[type='checkbox']:checked:after 
+{
+    content: "\2714";
+    position: absolute;
+    font-size: 90%;
+    left: 0.0625em;
+    top: -0.25em;
+}

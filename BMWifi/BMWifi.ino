@@ -1,3 +1,5 @@
+
+
 #if !defined (ESP8266)
 #error Change your board type to generic ESP8266
 // https://github.com/esp8266/Arduino#installing-with-boards-manager
@@ -12,7 +14,23 @@
 #include <EEPROM.h>
 #include <Ticker.h>
 
+// https://github.com/olikraus/u8g2
+#include <U8x8lib.h>
+
+#ifdef u8g2_HAVE_HW_SPIx
+#include <SPI.h>
+#endif
+
+U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);   // Adafruit ESP8266/32u4/ARM Boards + FeatherWing OLED
+
 #include "BMWifi.h"
+
+// You need to supply your own Secret.h defining 
+//#define SSID "<SSID>"      
+//#define PASS "<password>"  
+//#define APSSID  "<AP SSID>"
+//#define APPASS  "<AP password>"
+
 #include "Secret.h"
 
 
@@ -32,37 +50,38 @@ void  SetupAP (void);
 
 void setup (void)
 {
-  char result[16];
-  Serial.begin (115200);                           // full speed to monitor
+   char result[16];
+   Serial.begin (115200);                           // full speed to monitor
 
-  pinMode (ledPin, OUTPUT);
+   u8x8.begin();
+   u8x8.setPowerSave(0);
+ 
+   u8x8.setFont (u8x8_font_chroma48medium8_r);
+   u8x8.drawString (0,0,"BRC Wifi");
+//   u8x8.refreshDisplay();    // only required for SSD1606/7  
 
-  for (int i=0; i<6; i++)
-  {
-     digitalWrite (ledPin, LOW);
-     delay (500);
-     digitalWrite (ledPin, HIGH);
-     delay (500);
-  }
-  Serial.print ("\nGTDonation Starting\n");
+   pinMode (ledPin, OUTPUT);
 
-  EEPROM.begin (128); // Can go to 4096, probably
+   Serial.print ("\nBRC Wifi Starting\n");
+
+   EEPROM.begin (128); // Can go to 4096, probably
 
 //ESP.wdtDisable ();                               // used to debug, disable wachdog timer,
   
-  #if defined (NOT_AP)
-    ConnectToNetwork ();
-  #else
-    SetupAP ();
-  #endif
+   #if defined (NOT_AP)
+      ConnectToNetwork ();
+   #else
+      SetupAP ();
+   #endif
 
-  setupWebServer ();
-  yield ();
+   setupWebServer ();
+   yield ();
 
-  ReadEEData (EEDataAddr, &EEData, sizeof EEData);
+   ReadEEData (EEDataAddr, &EEData, sizeof EEData);
 
-  DisplayStatus ();
-  yield ();
+   DisplayStatus ();
+   yield ();
+  
 }
 
 void SetupAP (void)
@@ -178,7 +197,6 @@ void loop (void)
     
    yield ();
 }
-
 
 String  WiFiStatus (int s)
 {
