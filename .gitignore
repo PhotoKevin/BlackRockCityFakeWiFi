@@ -5,6 +5,7 @@
 
 Secret.h
 *.bat
+*.txt
 
 # User-specific files
 *.rsuser
