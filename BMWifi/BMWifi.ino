@@ -44,6 +44,7 @@ DNSServer dnsServer;
 const int ledPin = 2;
 
 struct eeprom_data_t  EEData;
+int EEChanged = 0;
 
 void  ConnectToNetwork (void);
 void  SetupAP (void);
@@ -58,6 +59,11 @@ void setup (void)
  
    u8x8.setFont (u8x8_font_chroma48medium8_r);
    u8x8.drawString (0,0,"BRC Wifi");
+   u8x8.drawString (1,1,"BRC Wifi");
+   u8x8.drawString (2,2,"BRC Wifi");
+   u8x8.drawString (3,3,"BRC Wifi");
+   u8x8.drawString (4,4,"BRC Wifi");
+   u8x8.drawString (5,5,"BRC Wifi");
 //   u8x8.refreshDisplay();    // only required for SSD1606/7  
 
    pinMode (ledPin, OUTPUT);
@@ -122,7 +128,7 @@ void ConnectToNetwork (void)
       Serial.print (".");
       sprintf (stat, "%d\n", WiFi.status ());
       Serial.print (stat);
-      delay (100);
+      delay (1000);
    }
 }
 

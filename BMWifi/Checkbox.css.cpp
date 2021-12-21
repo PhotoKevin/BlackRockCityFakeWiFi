@@ -26,7 +26,7 @@ const char checkbox_css[] PROGMEM =
 "\n"
 "input[type='checkbox']:checked:after \n"
 "{\n"
-" content: \"\2714\";\n"
+" content: \"\\2714\";\n"
 " position: absolute;\n"
 " font-size: 90%;\n"
 " left: 0.0625em;\n"

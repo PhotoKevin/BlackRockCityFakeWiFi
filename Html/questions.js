@@ -1,4 +1,5 @@
 {
+   var questionSet;
    var answered = false;
    function answerClick (nextPage, commentary)
    {
@@ -44,6 +45,104 @@
    {
       answerButton.disabled = false;
    }
+
+
+   var nextQuestionPage;
+
+   function getQuestionNumber ()
+   {
+      var qn = 0;
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams (window.location.search);
+      if (urlParams.get ('q') != null)
+         qn = Number (urlParams.get ('q'));
+
+      if (isNaN (qn) || (qn < 0) || (questionSet == null) || (qn > (questionSet.length-1)))
+         qn = 0;
+
+      return qn
+   }
+
+   function getNextPage ()
+   {
+      let nextNumber = 1 + getQuestionNumber ();
+      let nextQuestionPage = "question.html?q="+nextNumber;
+
+      if (nextNumber >= questionSet.length)
+         nextQuestionPage = "blocked.html";
+
+      return nextQuestionPage;
+   }
+
+   const xhr = new XMLHttpRequest();
+   function ajaxHandler ()
+   {
+      if (xhr.readyState === XMLHttpRequest.DONE)
+      {
+         if (xhr.status === 200)
+         {
+            var data = JSON.parse (xhr.responseText);
+            questionSet = data;
+            displayQuestion (getQuestionNumber());
+         }
+         else
+         {
+            //alert('There was a problem with the request: ' + xhr.status);
+         }
+      }
+   }
+
+   function getQuestionSet (qNumber)
+   {
+      displayQuestion (getQuestionNumber());
+
+      if (window.location.protocol == "file:")
+      {
+         displayQuestion (getQuestionNumber());
+      }
+      else
+      {
+         const url = 'getJson';
+         var formData = new FormData();
+         formData.append ("question", qNumber);
+
+         xhr.open ('POST', url, true);
+         xhr.onreadystatechange = ajaxHandler;
+         xhr.send (formData);
+      }
+   }
+
+   function displayQuestion (qn)
+   {
+      let questionData = questionSet[qn];
+
+      answers = questionData.answers;
+      commentary = questionData.commentary;
+      questionDiv.innerText = questionData.question;
+
+      for (let i=0; i<10; i++)
+      {
+         let optdiv = document.getElementById ("optdiv" + i);
+         if (optdiv != null)
+            optdiv.hidden = true;
+      }
+
+      for (let i=0; i<answers.length; i++)
+      {
+         let optdiv = document.getElementById ("optdiv" + i);
+         let optlabel = document.getElementById ("optlabel" + i);
+         let optinput = document.getElementById ("optinput" + i);
+         if (optdiv != null)
+         {
+            optdiv.hidden = false;
+            optlabel.innerText = answers[i].text;
+            optinput.dataset.correct = answers[i].correct;
+//            if (optinput.dataset.correct == "true")
+//               optdiv.style.color = "blue";
+         }
+      }
+   }
+
 
    // Randomize array in-place using Durstenfeld shuffle algorithm
    function shuffleArray (array)

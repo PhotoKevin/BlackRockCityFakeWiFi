@@ -1,17 +1,16 @@
-</<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" dir="ltr">
 
 <head>
    <meta charset="utf-8">
    <title>BRC Open WiFi</title>
-   <link rel="stylesheet" type="text/css" href="brc.css" />
-   <link rel="stylesheet" type="text/css" href="checkbox.css" />
-   <script type="text/javascript" src="questions.js"></script>
-   <style type="text/css">
+   <link rel="stylesheet" href="brc.css">
+   <link rel="stylesheet" href="checkbox.css">
+   <script src="questions.js"></script>
+   <style>
       .lic1
       {
          margin:0px 0px 9px;
-         color:rgb(151,51,51);
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
          line-height:19px;
       }
@@ -19,7 +18,6 @@
       .licsmall
       {
          font-size:11px;
-         color:rgb(43,143,43);
          line-height:14px;
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
       }
@@ -33,12 +31,16 @@
          padding:0px;
          margin:0px 0px 9px 25px;
          font-size:11px;
-         color:rgb(43,43,143);
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
+      }
+      
+      .submit
+      {
+         font-size: 2em;
       }
    </style>
 
-   <script type="text/javascript">
+   <script>
       function enable ()
       {
          agreeButton.disabled = !agreeChk.checked;
@@ -47,11 +49,11 @@
 </head>
 
 <body>
-   <div class="top">
+   <div class="top centerHorizontal" id="top">
    <!-- 750x1334 -->
       BRC Open WiFi
    </div>
-   <div class="main">
+   <div class="main centerHorizontal" id="main">
       <div dir="ltr">
       <p class="lic1">
       <small class="licsmall"><b>Terms and Conditions</b></small></p>
@@ -96,12 +98,12 @@
          <li >Making unauthorized copies of proprietary software, or offering unauthorized copies of proprietary software to others.</li>
          <li >Intercepting or examining the content of messages, files or communications in transit on a data network.
          <li >Dorking about on the internet when you should be living in the moment</li>
-      </li></ol></div>
+      </ol></div>
 
 
-      <form action="question.html" method="get">
+      <form action="question.html" method="post" class="submit">
          <input type="checkbox" name="checktest" value="agree" id="agreeChk" onclick="enable()">I Understand and Agree<br>
-         <input type="submit" value="Submit" id="agreeButton" class="main" disabled="true">
+         <input type="submit" value="Submit" id="agreeButton" class="main" disabled>
       </form>
    </div>
 

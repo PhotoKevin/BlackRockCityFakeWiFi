@@ -52,6 +52,9 @@ void process (const char *filename)
                else if (*ch == '\n')
                   fputs ("\\n", fout);
 
+               else if (*ch == '\\')
+                  fputs ("\\\\", fout);
+
                else if (*ch != ' ' || prevch != ' ')
                   fputc (*ch, fout);
 

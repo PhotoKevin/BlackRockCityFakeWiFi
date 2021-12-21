@@ -1,0 +1,24 @@
+/* https://stackoverflow.com/questions/4920281/how-to-change-the-size-of-the-radio-button-using-css */
+
+input[type="radio"]
+{
+   -webkit-appearance: none;
+   -moz-appearance: none;
+   appearance: none;
+
+   border-radius: 50%;
+   font: inherit;
+   width: 1em;
+   height: 1em;
+
+   border: 0.15em solid currentColor;
+   transition: 0.2s all linear;
+   position: relative;
+   top: 0.1em;
+}
+
+input[type="radio"]:checked 
+{
+   border: .4em solid black;
+   outline: unset !important /* I added this one for Edge (chromium) support */
+}

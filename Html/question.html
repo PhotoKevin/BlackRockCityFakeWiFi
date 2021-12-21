@@ -4,160 +4,58 @@
    <head>
       <meta charset="utf-8">
       <title>BRC Open WiFi</title>
-      <link rel="stylesheet" type="text/css" href="brc.css" />
-      <script type="text/javascript" src="questions.js"></script>
-      <script type="text/javascript">
-      var questionSet =
-      [
+      <link rel="stylesheet" href="brc.css">
+      <link rel="stylesheet" href="radio2.css">
+      <script src="questions.js"></script>
+      <script src="debugdata.js"></script>
+      <script>
+         function myOnload ()
          {
-            "question" : "You need to demonstrate that you are a burner and not a robot. Which of the following is not one of the Ten Principles?",
-            "answers" :
-            [
-               {"correct": true, text : "Radical Self Entitlement"},
-               {"correct": false, text : "Radical Inclusion"},
-               {"correct": false, text : "Immediacy"},
-            ],
-            "commentary" : "Radical Self Entitlement is not a principle."
-         },
-         {
-            "question": "Burning Man and the citizens of Black Rock City are dedicated to the Ten Principles. How many principles are there?",
-            "answers" :
-            [
-               {"correct": false, text: "Trick question, there are only nine principles"},
-               {"correct": true, text: "Ten"},
-               {"correct": false, text: "Some other answer"},
-            ],
-            "commentary" : ""
+            let questionNumber = 0;
+            console.log("onload");
+
+            questionNumber = getQuestionNumber ();
+            console.log ("This is question " + questionNumber);
+
+            getQuestionSet ();
+
+            /* solution.innerHTML = "Screen  " + screen.width + "x"+ screen.height; */
          }
-      ];
-
-      var nextQuestionPage;
-
-      function getQuestionNumber ()
-      {
-         var qn = 0;
-         const queryString = window.location.search;
-         const urlParams = new URLSearchParams (window.location.search);
-         if (urlParams.get ('q') != null)
-            qn = Number (urlParams.get ('q'));
-
-         if (isNaN (qn) || (qn < 0)|| (qn > (questionSet.length-1)))
-            qn = 0;
-
-         return qn
-      }
-
-      const xhr = new XMLHttpRequest();
-      function someHandler ()
-      {
-         if (xhr.readyState === XMLHttpRequest.DONE)
-         {
-            if (xhr.status === 200)
-            {
-               var data = JSON.parse (xhr.responseText);
-               questionSet = data;
-               displayQuestion (getQuestionNumber());
-            }
-            else
-            {
-               //alert('There was a problem with the request: ' + xhr.status);
-            }
-         }
-      }
-
-      function getQuestionSet (qNumber)
-      {
-         const url = 'getJson';
-
-         var formData = new FormData();
-
-         formData.append ("question", qNumber);
-
-         xhr.open ('POST', url, true);
-         xhr.onreadystatechange = someHandler;
-         xhr.send (formData);
-      }
-
-      function displayQuestion (qn)
-      {
-         let questionData = questionSet[qn];
-
-         answers = questionData.answers;
-         commentary = questionData.commentary;
-         questionDiv.innerText = questionData.question;
-
-         for (let i=0; i<10; i++)
-         {
-            let optdiv = document.getElementById ("optdiv" + i);
-            if (optdiv != null)
-               optdiv.hidden = true;
-         }
-
-         for (let i=0; i<answers.length; i++)
-         {
-            let optdiv = document.getElementById ("optdiv" + i);
-            let optlabel = document.getElementById ("optlabel" + i);
-            let optinput = document.getElementById ("optinput" + i);
-            if (optdiv != null)
-            {
-               optdiv.hidden = false;
-               optlabel.innerText = answers[i].text;
-               optinput.dataset.correct = answers[i].correct;
-               if (optinput.dataset.correct == "true")
-                  optdiv.style.color = "blue";
-            }
-         }
-      }
-
-      function myOnload ()
-      {
-         var questionNumber = 0;
-         console.log("onload");
-
-         questionNumber = getQuestionNumber ();
-         var nextNumber = 1 + questionNumber;
-         console.log ("This is question " + questionNumber);
-         console.log ("Next is ", nextNumber);
-
-         if (nextNumber >= questionSet.length)
-            nextQuestionPage = "blocked.html";
-         else
-            nextQuestionPage = "question.html?q="+nextNumber;
-
-         getQuestionSet ();
-      }
       </script>
    </head>
 
-   <body  onload="myOnload()">
-      <div class="top" id="top">
+   <body onload="myOnload()">
+      <div class="top centerHorizontal" id="top">
          BRC Open WiFi
       </div>
-      <div class="main" id="main">
+      <div class="main centerHorizontal" id="main">
          <div id="questionDiv">
-         You need to demonstrate that you are a burner and not a robot.
-         Which of the following is not one of the Ten Principles?
+            Loading question set.
          </div>
          <div class="answers">
-            <div style="background: #7a7467" id="optdiv0" hidden="true">
+            <div id="optdiv0" hidden>
               <input type="radio" id="optinput0" name="answer" value="0" onclick="selectionChanged()"/>
               <label id="optlabel0" for="optinput0">0</label>
            </div>
-            <div style="background: #a9a395" id="optdiv1" hidden="true">
+            <div id="optdiv1" hidden>
               <input type="radio" id="optinput1" name="answer" value="1" onclick="selectionChanged()"/>
               <label id="optlabel1" for="optinput1">1</label>
            </div>
-           <div style="background: #4e493d" id="optdiv2" hidden="true">
+           <div id="optdiv2" hidden>
               <input type="radio" id="optinput2" name="answer" value="2" onclick="selectionChanged()"/>
               <label id="optlabel2" for="optinput2">2</label>
            </div>
-           <div id="optdiv3" hidden="true">
+           <div id="optdiv3" hidden>
               <input type="radio" id="optinput3" name="answer" value="3" onclick="selectionChanged()"/>
               <label id="optlabel3" for="optinput3">3</label>
            </div>
+           <div id="optdiv4" hidden>
+              <input type="radio" id="optinput4" name="answer" value="4" onclick="selectionChanged()"/>
+              <label id="optlabel4" for="optinput4">3</label>
+           </div>
          </div>
          <div class="main">
-            <button class="normal" id="answerButton" onclick="answerClick(nextQuestionPage,commentary)" disabled="true" value="Sub">Answer</button> <span  id="solution" class="normal"></span>
+            <button class="normal" id="answerButton" onclick="answerClick(getNextPage(),commentary)" disabled value="Sub">Answer</button> <span  id="solution" class="normal"></span>
          </div>
       </div>
    </body>
