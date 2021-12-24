@@ -30,7 +30,7 @@ static time_t lastSave = 0;
 void SaveEEDataIfNeeded (int address, void *data, size_t nbytes)
 {
    time_t currentTime = time (NULL);
-   float secs = difftime (lastSave, currentTime);
+   float secs = difftime (currentTime, lastSave);
    if (secs > 60 && EEChanged)
    {
       Serial.println ("Saving EEData");
