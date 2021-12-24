@@ -29,13 +29,13 @@ void ReadEEData (int address, void *data, size_t nbytes)
 static time_t lastSave = 0;
 void SaveEEDataIfNeeded (int address, void *data, size_t nbytes)
 {
-   time_t now = time (NULL);
-   float secs = difftime (lastSave, now);
+   time_t currentTime = time (NULL);
+   float secs = difftime (lastSave, currentTime);
    if (secs > 60 && EEChanged)
    {
       Serial.println ("Saving EEData");
       WriteEEData (address, data, nbytes);
-      lastSave = now;
+      lastSave = currentTime;
       EEChanged = 0;
    }
 }

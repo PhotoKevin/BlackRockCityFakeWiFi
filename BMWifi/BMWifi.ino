@@ -21,7 +21,8 @@
 #include <SPI.h>
 #endif
 
-U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);   // Adafruit ESP8266/32u4/ARM Boards + FeatherWing OLED
+//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);   // Adafruit ESP8266/32u4/ARM Boards + FeatherWing OLED
+U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 
 #include "BMWifi.h"
 
@@ -33,6 +34,7 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);   // Adafr
 
 #include "Secret.h"
 
+const char *myHostname = "BRCWiFi";
 
 
 
@@ -59,11 +61,6 @@ void setup (void)
  
    u8x8.setFont (u8x8_font_chroma48medium8_r);
    u8x8.drawString (0,0,"BRC Wifi");
-   u8x8.drawString (1,1,"BRC Wifi");
-   u8x8.drawString (2,2,"BRC Wifi");
-   u8x8.drawString (3,3,"BRC Wifi");
-   u8x8.drawString (4,4,"BRC Wifi");
-   u8x8.drawString (5,5,"BRC Wifi");
 //   u8x8.refreshDisplay();    // only required for SSD1606/7  
 
    pinMode (ledPin, OUTPUT);
@@ -84,35 +81,45 @@ void setup (void)
    yield ();
 
    ReadEEData (EEDataAddr, &EEData, sizeof EEData);
+   if (EEData.totalBanned < 0)
+      memset (&EEData, 0, sizeof EEData);
 
    DisplayStatus ();
    yield ();
   
 }
 
+/// Setup the ESP8266 as an Access Point
+/// The APSSID and APPASS should have been 
+/// defined in Secret.h which was included 
+/// at the top.
+
 void SetupAP (void)
 {
-  int rc;
-  Serial.print ("AP");
-  WiFi.mode (WIFI_AP);
-  Serial.print ("Set Mode");
-//  WiFi.softAPConfig (IPAddress (192, 168, 4, 4), 0x01F4A8C0, 0x00FFFFFF);
+   int rc;
+   WiFi.mode (WIFI_AP);
 
-  rc = WiFi.softAP (APSSID, APPASS);
-  Serial.printf ("softAP : %d\n", rc);
+   rc = WiFi.softAP (APSSID, APPASS);
+   Serial.printf ("softAP : %d\n", rc);
 
-  IPAddress ip = WiFi.softAPIP ();
+   IPAddress ip = WiFi.softAPIP ();
 
-  char result[16];
-  sprintf (result, "AP is %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-  Serial.println (result);
+   char result[16];
+   sprintf (result, "AP is %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+   Serial.println (result);
 
-//  IPAddress local_ip; IPAddress gateway; IPAddress subnet;
-//  local_ip
-
-  dnsServer.setErrorReplyCode (DNSReplyCode::NoError);
-  dnsServer.start (DNS_PORT, "*", ip);
+   // Set up a DNS server. 
+   dnsServer.setErrorReplyCode (DNSReplyCode::NoError);
+   dnsServer.start (DNS_PORT, "*", ip);
 }
+
+/// Connect the ESP to a network
+/// This is really for debugging, it's a lot
+/// easier to do most of the testing from a
+/// desktop webbrowser with developer tools
+/// than it is to work on a phone.
+/// You need to define your user/pw in Secret.h
+/// as included above
 
 void ConnectToNetwork (void)
 {
@@ -120,9 +127,10 @@ void ConnectToNetwork (void)
    
    Serial.print ("Connecting");
    WiFi.disconnect ();
-   wl_status_t ws = WiFi.begin (SSID, PASS);                         // Connect to WiFi network
+   wl_status_t ws = WiFi.begin (SSID, PASS); // Connect to WiFi network
    Serial.printf ("\nWiFi.Begin: %d\n", ws);
-   
+
+   // Wait until we connect, and do some status messages
    while (WiFi.localIP()[0] == 0)
    {
       Serial.print (".");
@@ -136,13 +144,29 @@ void ConnectToNetwork (void)
 //https://android.stackexchange.com/questions/170387/android-wifi-says-connected-no-internet-but-internet-works-just-fine
 //https://www.hackster.io/rayburne/esp8266-captive-portal-5798ff
 
-boolean connect;
+boolean connectRequired;
 long lastConnectTry = 0;
 int laststatus = WL_IDLE_STATUS;
-const char *myHostname = "GTDonation";
+
+
+void DisplayOLEDStatus (void)
+{
+   char buffer[32];
+   u8x8.drawString (0,0,"BRC Wifi");
+
+   snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
+   u8x8.drawString (0,1, buffer);
+   sprintf (buffer, "Banned %d", EEData.totalBanned);
+   u8x8.drawString (0,2, buffer);
+
+   u8x8.refreshDisplay();    // only required for SSD1606/7  
+
+}
+
 
 void loop (void)
 {
+   DisplayOLEDStatus ();
    static int noStats = -1;
    if (noStats != WiFi.softAPgetStationNum())
    {
@@ -150,52 +174,52 @@ void loop (void)
       Serial.printf ("Connects: %d\n", noStats);
    }
 //   Serial.printf("Free Heap: %d Bytes\n", ESP.getFreeHeap());   
-   if (connect) 
+   if (connectRequired) 
    {
       Serial.println ( "Connect requested" );
-      connect = false;
+      connectRequired = false;
       ConnectToNetwork ();
       lastConnectTry = millis();
    }
    
+
+   int currentStatus = WiFi.status();
+   if ((currentStatus == 0) && (millis() > (lastConnectTry + 60000))) 
    {
-      int s = WiFi.status();
-      if (s == 0 && millis() > (lastConnectTry + 60000) ) 
-      {
-         /* If WLAN disconnected and idle try to connect */
-         /* Don't set retry time too low as retry interfere the softAP operation */
-         connect = true;
-      }
-      if (laststatus != s) 
-      {
-         // WLAN status change
-         Serial.print ( "Status: " );
-         Serial.println ( WiFiStatus (s) );
-         laststatus = s;
-         if (s == WL_CONNECTED) 
-         {
-            /* Just connected to WLAN */
-            Serial.println ( "" );
-            Serial.print ( "IP address: " );
-            Serial.println ( WiFi.localIP() );
-         
-            // Setup MDNS responder
-            if (!MDNS.begin(myHostname)) 
-               Serial.println("Error setting up MDNS responder!");
-            else 
-            {
-               Serial.println("mDNS responder started");
-               // Add service to MDNS-SD
-               MDNS.addService("http", "tcp", 80);
-            }
-         }
-         else if (s == WL_NO_SSID_AVAIL) 
-         {
-           WiFi.disconnect();
-         }
-      }
+      /* If WLAN disconnected and idle try to connect */
+      /* Don't set retry time too low as retry interfere the softAP operation */
+      connectRequired = true;
    }
    
+   if (laststatus != currentStatus) 
+   {
+      // WLAN status change
+      Serial.print ("Status: ");
+      Serial.println (WiFiStatus (currentStatus));
+      laststatus = currentStatus;
+      if (currentStatus == WL_CONNECTED) 
+      {
+         /* Just connected to WLAN */
+         Serial.println ( "" );
+         Serial.print ("IP address: ");
+         Serial.println (WiFi.localIP());
+      
+         // Setup MDNS responder
+         if (!MDNS.begin(myHostname)) 
+            Serial.println("Error setting up MDNS responder!");
+         else 
+         {
+            Serial.println("mDNS responder started");
+            // Add service to MDNS-SD
+            MDNS.addService("http", "tcp", 80);
+         }
+      }
+      else if (currentStatus == WL_NO_SSID_AVAIL) 
+      {
+        WiFi.disconnect();
+      }
+   }
+  
    
    /////////////
    dnsServer.processNextRequest();
@@ -204,20 +228,23 @@ void loop (void)
    yield ();
 }
 
+/// Convert a WiFi Status to a human readable string
+/// Codes defined in wl_definitions.h
 String  WiFiStatus (int s)
 {
-  switch (s)
-  {
-    case WL_NO_SHIELD:  return "No Shield";
-    case WL_IDLE_STATUS: return "Idle";
-    case WL_NO_SSID_AVAIL: return "No SSID Available";
-    case WL_SCAN_COMPLETED: return "Completed";
-    case WL_CONNECTED: return "Connected";
-    case WL_CONNECT_FAILED: return "Connect Failed";
-    case WL_CONNECTION_LOST: return "Connection Lost";
-    case WL_DISCONNECTED: return "Disconnected";
-    default: return "Unknown status";
-  }
+   switch (s)
+   {
+   case WL_NO_SHIELD:  return "No Shield";              // 255
+   case WL_IDLE_STATUS: return "Idle";                  // 0
+   case WL_NO_SSID_AVAIL: return "No SSID Available";   // 1
+   case WL_SCAN_COMPLETED: return "Completed";          // 2
+   case WL_CONNECTED: return "Connected";               // 3
+   case WL_CONNECT_FAILED: return "Connect Failed";     // 4
+   case WL_CONNECTION_LOST: return "Connection Lost";   // 5
+   case WL_WRONG_PASSWORD: return "Wrong Password";     // 6
+   case WL_DISCONNECTED: return "Disconnected";         // 7
+   default: return "Unknown status";                    //
+   }
 }
 
 void DisplayStatus (void)
@@ -273,21 +300,4 @@ void client_status()
       Serial.println();
    }
    delay(500);
-}
-
-void showConnectedDevices()
-{
-    auto client_count = wifi_softap_get_station_num();
-    Serial.printf("Total devices connected = %d\n", client_count);
-
-    auto i = 1;
-    struct station_info *station_list = wifi_softap_get_station_info();
-    while (station_list != NULL) {
-        auto station_ip = IPAddress((&station_list->ip)->addr).toString().c_str();
-        char station_mac[18] = {0};
-        sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));
-        Serial.printf("%d. %s %s", i++, station_ip, station_mac);
-        station_list = STAILQ_NEXT(station_list, next);
-    }
-    wifi_softap_free_station_info();
 }

@@ -6,19 +6,46 @@
 
 #include "BMWifi.h"
 long long clientAddress ();
-static int isBanned (long long address);
+
+static bool allowSend (const char *type, String page)
+{
+   bool rc = false;
+   Serial.printf ("Checking allowed: %s(%s)",  page.c_str(), type);
+
+   Serial.printf (" isBanned? -> %d\n", isBanned (clientAddress()));
+
+   if (NULL == strstr (type, "html"))
+      rc = true;
+   else if (!isBanned (clientAddress ()))
+      rc = true;
+   else if (server.uri() == "/blocked.hmtl")
+      rc = true;
+   else if (server.uri() == "/banned.hmtl")
+      rc = true;
+
+   Serial.printf (" --> %s\n", rc ? "OK" : "NOK");
+   return rc;
+}
 
 static void send (const char *type, const char *txt)
 {
-   Serial.println (server.uri());
-   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
-   server.send (200, type, "");
-   if (!isBanned (clientAddress ()) || (NULL == strstr (type, "html")))
-      server.sendContent (txt);
-   else
-      server.sendContent (blocked_html);
-   yield ();
+   IPAddress clientIP = server.client().remoteIP();
+   Serial.print (server.uri ());
+   Serial.printf ("(%s) -> %s\n", type, clientIP.toString ().c_str ());
    
+   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
+   server.sendHeader ("Cache-Control", "no-store");
+   server.send (200, type, "");
+   if (allowSend (type, server.uri ()))
+   {
+      server.sendContent (txt);
+   }
+   else
+   {
+      server.sendContent (banned_html);
+   }
+   yield ();
+   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 }
 
 // https://www.esp8266.com/viewtopic.php?f=8&t=4307
@@ -32,7 +59,7 @@ long long mac2ll (uint8 *mac)
 
    for (int i=0; i<6; i++)
    {
-      address << 8;
+      address <<= 8;
       address += mac[i];
    }
 
@@ -45,8 +72,7 @@ long long ip2ll (IPAddress ip)
 
    for (int i=0; i<4; i++)
    {
-      Serial.printf ("  ... %llx", address);
-      address << 8;
+      address <<= 8;
       address += ip[i];
    }
 
@@ -58,18 +84,15 @@ long long clientAddress ()
    long long address = 0;
    WiFiClient cli = server.client ();
    IPAddress clientIP = server.client().remoteIP();
-   Serial.printf ("Client %s\n", clientIP.toString().c_str());
-
+   
    auto client_count = wifi_softap_get_station_num();
    auto i = 1;
    struct station_info *station_list = wifi_softap_get_station_info();
    while (station_list != NULL) 
    {
       IPAddress station = IPAddress ((&station_list->ip)->addr);
-      Serial.printf ("  Possible: %s\n", station.toString().c_str());
       if (clientIP == station)
       {
-         Serial.println ("  Match");
          address = mac2ll (station_list->bssid);
          
          auto station_ip = station.toString().c_str();
@@ -83,78 +106,66 @@ long long clientAddress ()
 
    if (address == 0)
       address = ip2ll (clientIP);
-   Serial.printf (" --> %llx\n", address);
       
    return address;
 }
 
-
-static void handlebrccss (void){   send ("text/css", brc_css);}
-static void handleCheckboxCSS (void) {   send ("text/css", checkbox_css);}
-static void handleQuestionJson (void) {    send ("application/javascript", questions_json); }
-static void handleQuestion (void) {    send ("text/html", question_html);}
-static void notFound (void) {  server.send (404, "text/html", "");}
-static void handleLegal (void) {    send ("text/html", legal_html);}
-static void handlequestionsjs (void) {   send ("application/javascript", questions_js);}
-static void handleRadioCSS (void) {   send ("text/css", radio2_css);}
-static void handleDebugData (void) {    send ("application/javascript", debugdata_js);}
-
-static void expireBanned ()
+static void handleBanned (void)      {send ("text/html", banned_html);}
+static void handleLegal (void)       
 {
-   time_t currentTime = time (NULL);
-   for (int i=0; i<NUM_BANNED; i++)
+   EEData.totalRedirects += 1;
+   EEChanged = 1;
+   send ("text/html", legal_html);
+}
+static void handleQuestion (void)    {send ("text/html", question_html);}
+
+static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
+static void handlebrccss (void)      {send ("text/css", brc_css);}
+static void handleCheckboxCSS (void) {send ("text/css", checkbox_css);}
+
+static void handlequestionsjs (void) {send ("application/javascript", questions_js);}
+static void handleBannedJs (void)    {send ("application/javascript", banned_js);}
+static void handleDebugData (void)   {send ("application/javascript", debugdata_js);}
+
+static void notFound (void)          
+{
+   Serial.printf ("Not found: %s\n", server.uri ());
+   server.send (404, "text/html", "");
+}
+
+static void handleQuestionJson (void) 
+{
+   if (!server.hasArg ("request"))
+      Serial.println ("Bad request");
+   else
    {
-      if (EEData.banned[i].timestamp != (time_t) 0)
+      String request = server.arg ("request");
+      if (request == "question")
+         send ("application/javascript", questions_json);
+      else if (request = "expire")
       {
-         float secs = difftime (currentTime, EEData.banned[i].timestamp);
-         if (secs > 20)
-         {
-            Serial.printf ("Removing %llx\n", EEData.banned[i].address);
-            EEData.banned[i].timestamp = 0;
-         }
+         char json[44];
+         long long device = clientAddress ();
+         int expires = banExpires (device);
+
+         snprintf (json, sizeof json, "{\"expire\" : \"%d\"}", expires);
+         send ("application/javascript", json);
       }
+      else
+         Serial.printf ("Unknown request: %s\n", request);
    }
 }
 
-static void banDevice (long long address)
-{
-   Serial.printf ("Banning %llx\n", address);
-   time_t currentTime = time (NULL);
-   for (int i=0; i<NUM_BANNED; i++)
-   {
-      if (EEData.banned[i].timestamp == (time_t) 0)
-      {
-         EEData.banned[i].address = address;
-         EEData.banned[i].timestamp = currentTime;
-         EEChanged = 1;
-         break;
-      }
-   }
-   /* If there were no empty slots, they get a free pass */
-}
 
-static int isBanned (long long address)
-{
-   expireBanned ();
-   for (int i=0; i<NUM_BANNED; i++)
-   {
-      if (EEData.banned[i].address == address)
-         return 1;
-   }
-
-   return 0;   
-}
-
-static void handleBlocked (void) 
+void handleBlocked (void) 
 {
    long long device = clientAddress ();
-   banDevice (device);
    send ("text/html", blocked_html); 
 
+   banDevice (device);
    if (isBanned (device))
-      Serial.printf ("Banned\n");
+      Serial.printf ("Device %llx is Banned\n", device);
 }
-
 
    
 // https://techtutorialsx.com/2018/07/22/esp32-arduino-http-server-template-processing/
@@ -163,27 +174,15 @@ static void handleBlocked (void)
 
 extern U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8;
 
-static void redirectPage (void)
+static void XXredirectPage (void)
 {
-   client_status ();
-   Serial.print ("Redirecting from ");
-   Serial.println (server.uri());
+   EEData.totalRedirects += 1;
+   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
+   server.sendHeader ("Cache-Control", "no-store");
+   server.sendHeader ("Location", "/legal.html");
+   server.send (301);
 
-   WiFiClient cli = server.client ();
-   IPAddress clientIP = server.client().remoteIP();
-   Serial.print ("Client IP: ");
-   Serial.println (clientIP.toString ());
-
-   char ip[30];
-   clientIP.toString().toCharArray (ip, 16);
-   u8x8.drawString (0, 1, ip);
-//   u8x8.refreshDisplay();    // only required for SSD1606/7  
-
-   //         auto station_ip = IPAddress((&station_list->ip)->addr).toString().c_str();
-   
-  server.setContentLength (CONTENT_LENGTH_UNKNOWN);
-  server.sendHeader ("Location", "/legal.html");
-  server.send (301);
+   Serial.printf ("Redirects %d\n", EEData.totalRedirects);
 }
 
 void setupWebServer (void)
@@ -199,12 +198,15 @@ void setupWebServer (void)
   // Set up the endpoints for HTTP server
 //  server.on ("/donation", HTTP_POST, handlePage);
 //  server.on ("/donation", HTTP_GET,  handlePage);
-   server.onNotFound (redirectPage);
-   
+   server.onNotFound (notFound);
+
+   server.on ("/", HTTP_GET, handleLegal);
    server.on ("/checkbox.css", HTTP_GET,  handleCheckboxCSS);
    server.on ("/question.html", HTTP_GET,  handleQuestion);
    server.on ("/question.html", HTTP_POST,  handleQuestion);
    server.on ("/legal.html", HTTP_GET,  handleLegal);
+   server.on ("/banned.html", HTTP_GET,  handleBanned);
+   server.on ("/banned.js", HTTP_GET,  handleBannedJs);
    server.on ("/blocked.html", HTTP_GET,  handleBlocked);
    server.on ("/debugdata.js", HTTP_GET,  handleDebugData);
    server.on ("/brc.css", HTTP_GET,  handlebrccss);
@@ -216,5 +218,5 @@ void setupWebServer (void)
    server.begin ();
    yield ();
 
-  Serial.printf ("Listening at: %s\n", correctURL);
+   Serial.printf ("Listening at: %s\n", correctURL);
 }

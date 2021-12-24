@@ -6,10 +6,10 @@ struct banned_t
    time_t timestamp;
 };
 
-#define NUM_BANNED 20
 struct eeprom_data_t
 {
-  struct banned_t banned[NUM_BANNED];
+   int totalBanned;
+   int totalRedirects;
 };
 extern int EEChanged;
 
@@ -27,17 +27,27 @@ extern const char blocked_html[];
 extern const char questions_json[];
 extern const char debugdata_js[];
 extern const char radio2_css[];
+extern const char banned_js[];
+extern const char banned_html[];
 
 #if defined (ESP8266WEBSERVER_H)
   extern ESP8266WebServer server;
 #endif
 
 void DisplayStatus (void);
+void DisplayOLEDStatus (void);
 
 void  setupWebServer (void);
 
 void WriteEEData (int address, const void *data, size_t nbytes);
 void ReadEEData (int address, void *data, size_t nbytes);
-
+void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 
 void client_status (void);
+
+
+void expireBanned (void);
+int banExpires (long long address);
+void banDevice (long long address);
+int isBanned (long long address);
+void handleBlocked (void) ;

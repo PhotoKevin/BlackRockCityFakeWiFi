@@ -104,13 +104,14 @@
       {
          const url = 'getJson';
          var formData = new FormData();
-         formData.append ("question", qNumber);
+         formData.append ("request", "question");
 
          xhr.open ('POST', url, true);
          xhr.onreadystatechange = ajaxHandler;
          xhr.send (formData);
       }
    }
+
 
    function displayQuestion (qn)
    {
