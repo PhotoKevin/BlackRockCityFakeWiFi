@@ -5,7 +5,7 @@
 // https://github.com/esp8266/Arduino#installing-with-boards-manager
 #endif
 
-#define NOT_AP    // Define for debugging as just a device on the network
+//#define NOT_AP    // Define for debugging as just a device on the network
 
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
