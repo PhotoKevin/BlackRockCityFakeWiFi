@@ -10,27 +10,27 @@
    <style>
       .lic1
       {
-         margin:0px 0px 9px;
+         margin:0em 0em 0.5em;
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
-         line-height:19px;
+         line-height:1em;
       }
 
       .licsmall
       {
-         font-size:11px;
-         line-height:14px;
+         font-size:0.9em;
+         line-height:1em;
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
       }
       .lic18px
       {
-         line-height:18px;
+         line-height:1em;
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
       }
       .liclist
       {
-         padding:0px;
-         margin:0px 0px 9px 25px;
-         font-size:11px;
+         padding:0em;
+         margin:0em 0px 0.5em 2em;
+         font-size:0.5em;
          font-family:Helvetica Neue,Helvetica,Arial,sans-serif;
       }
       
@@ -103,7 +103,8 @@
 
       <form action="question.html" method="post" class="submit">
          <input type="checkbox" name="checktest" value="agree" id="agreeChk" onclick="enable()">I Understand and Agree<br>
-         <input type="submit" value="Submit" id="agreeButton" class="main" disabled>
+         <input type="submit" value="Submit" id="agreeButton" class="main" onclick="getElementById('submitTimeStamp').value = new Date ().toISOString()" disabled>
+         <input type="hidden" id="submitTimeStamp" name="timeStamp" value="3487">
       </form>
    </div>
 

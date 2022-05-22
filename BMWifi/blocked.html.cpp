@@ -15,7 +15,7 @@ const char blocked_html[] PROGMEM =
 " <div class=\"top centerHorizontal\" id=\"top\">\n"
 " BRC Open WiFi\n"
 " </div>\n"
-" <div class=\"main centerHorizontal\" id=\"main\">\n"
+" <div class=\"banned centerHorizontal\" id=\"main\">\n"
 " Thank you for showing that you are not a robot. Access to internet services is DENIED due to\n"
 " violations of the Terms & Conditions which clearly listed \"Dorking about on the internet\" under\n"
 " \"Examples of Unacceptable Uses\" as it is a violation of the principle of Immediacy.\n"
