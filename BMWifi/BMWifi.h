@@ -13,6 +13,7 @@ struct eeprom_data_t
 };
 extern int EEChanged;
 
+extern const char *myHostname;
 
 extern struct eeprom_data_t  EEData;
 const int EEDataAddr = 40;

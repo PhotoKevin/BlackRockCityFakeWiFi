@@ -21,9 +21,9 @@
 #include <SPI.h>
 #endif
 
-//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);   // Adafruit ESP8266/32u4/ARM Boards + FeatherWing OLED
 U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 
+//https://android.googlesource.com/platform/frameworks/base/+/c80f952/core/java/android/net/CaptivePortalTracker.java
 #include "BMWifi.h"
 
 // You need to supply your own Secret.h defining 
@@ -35,6 +35,8 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 #include "Secret.h"
 
 const char *myHostname = "BRCWiFi";
+IPAddress apIP (8, 18, 8, 8);
+IPAddress netMsk (255, 255, 255, 0);
 
 
 
@@ -53,7 +55,6 @@ void  SetupAP (void);
 
 void setup (void)
 {
-   char result[16];
    Serial.begin (115200);                           // full speed to monitor
 
    u8x8.begin();
@@ -68,8 +69,6 @@ void setup (void)
    Serial.print ("\nBRC Wifi Starting\n");
 
    EEPROM.begin (128); // Can go to 4096, probably
-
-//ESP.wdtDisable ();                               // used to debug, disable wachdog timer,
   
    #if defined (NOT_AP)
       ConnectToNetwork ();
@@ -86,7 +85,6 @@ void setup (void)
 
    DisplayStatus ();
    yield ();
-  
 }
 
 /// Setup the ESP8266 as an Access Point
@@ -99,7 +97,10 @@ void SetupAP (void)
    int rc;
    WiFi.mode (WIFI_AP);
 
-   rc = WiFi.softAP (APSSID, APPASS);
+   WiFi.softAPConfig (apIP, apIP, netMsk);
+   rc = WiFi.softAP (APSSID);
+
+//   rc = WiFi.softAP (APSSID, APPASS);
    Serial.printf ("softAP : %d\n", rc);
 
    IPAddress ip = WiFi.softAPIP ();
@@ -151,13 +152,42 @@ int laststatus = WL_IDLE_STATUS;
 
 void DisplayOLEDStatus (void)
 {
+   static time_t prevTime = 0;
+   static int prevRedirects = -1;
+   static int prevBanned = -1;
+   bool refresh = false;
+   time_t now = time (NULL);
+
+   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 5)
+      refresh = true;
+
    char buffer[32];
    u8x8.drawString (0,0,"BRC Wifi");
 
    snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
-   u8x8.drawString (0,1, buffer);
-   sprintf (buffer, "Banned %d", EEData.totalBanned);
-   u8x8.drawString (0,2, buffer);
+   if (refresh)
+   {
+      Serial.println (buffer);
+      u8x8.drawString (0,1, buffer);
+      prevRedirects = EEData.totalRedirects;
+   }
+
+   snprintf (buffer, sizeof buffer, "Banned %d", EEData.totalBanned);
+   if (refresh)
+   {
+      Serial.println (buffer);
+      u8x8.drawString (0,2, buffer);
+      prevBanned = EEData.totalBanned;
+   }
+
+   if (refresh)
+   { 
+      strftime (buffer, sizeof buffer, "%FT%T", gmtime (&now));
+      Serial.println (buffer);
+      buffer[15] = '\0';
+      u8x8.drawString (0,3, buffer);
+      prevTime = now;
+   }
 
    u8x8.refreshDisplay();    // only required for SSD1606/7  
 

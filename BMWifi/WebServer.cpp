@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <time.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 
@@ -34,7 +35,10 @@ static void send (const char *type, const char *txt)
    Serial.printf ("(%s) -> %s\n", type, clientIP.toString ().c_str ());
    
    server.setContentLength (CONTENT_LENGTH_UNKNOWN);
-   server.sendHeader ("Cache-Control", "no-store");
+   server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
+   server.sendHeader ("Pragma", "no-cache");
+   server.sendHeader ("Expires", "-1");
+
    server.send (200, type, "");
    if (allowSend (type, server.uri ()))
    {
@@ -117,7 +121,42 @@ static void handleLegal (void)
    EEChanged = 1;
    send ("text/html", legal_html);
 }
-static void handleQuestion (void)    {send ("text/html", question_html);}
+static void handleQuestion (void)    
+{
+   if (server.hasArg ("timeStamp"))
+   {
+      String request = server.arg ("timeStamp");
+      if (request != NULL)
+      {
+         Serial.printf ("TimeStamp: %s\n", request.c_str ());
+         int year, month, day;
+         int hour, minute, second;
+
+         int n = sscanf (request.c_str(), "%04d-0%02d-%02dT%02d:%02d:%02d", &year, &month, &day, &hour, &minute, &second);
+         if (n == 6)
+         {
+            struct tm newtime;
+            memset (&newtime, 0, sizeof newtime);
+            newtime.tm_year = year - 1900;
+            newtime.tm_mon = month - 1;
+            newtime.tm_mday = day;
+            newtime.tm_hour = hour;
+            newtime.tm_min = minute;
+            newtime.tm_sec = second;
+            newtime.tm_isdst = -1;
+            time_t nowtime = mktime (&newtime);
+            Serial.printf ("good: %d:%d:%d\n", hour, minute, second);
+            struct timeval tv;
+            memset (&tv, 0, sizeof tv);
+            tv.tv_sec = nowtime;
+            settimeofday (&tv, NULL);
+
+           // set_system_time (2000);
+         }
+      }
+   }
+   send ("text/html", question_html);
+}
 
 static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
 static void handlebrccss (void)      {send ("text/css", brc_css);}
@@ -129,7 +168,7 @@ static void handleDebugData (void)   {send ("application/javascript", debugdata_
 
 static void notFound (void)          
 {
-   Serial.printf ("Not found: %s\n", server.uri ());
+   Serial.printf ("Not found: %s\n", server.uri ().c_str());
    server.send (404, "text/html", "");
 }
 
@@ -152,7 +191,7 @@ static void handleQuestionJson (void)
          send ("application/javascript", json);
       }
       else
-         Serial.printf ("Unknown request: %s\n", request);
+         Serial.printf ("Unknown request: %s\n", request.c_str());
    }
 }
 
@@ -167,22 +206,42 @@ void handleBlocked (void)
       Serial.printf ("Device %llx is Banned\n", device);
 }
 
-   
-// https://techtutorialsx.com/2018/07/22/esp32-arduino-http-server-template-processing/
 
 // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
 
 extern U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8;
 
-static void XXredirectPage (void)
-{
-   EEData.totalRedirects += 1;
-   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
-   server.sendHeader ("Cache-Control", "no-store");
-   server.sendHeader ("Location", "/legal.html");
-   server.send (301);
 
-   Serial.printf ("Redirects %d\n", EEData.totalRedirects);
+
+/** Is this an IP? */
+boolean isIp(String str) {
+  for (size_t i = 0; i < str.length(); i++) {
+    int c = str.charAt(i);
+    if (c != '.' && (c < '0' || c > '9')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void handlePortalCheck () 
+{
+   Serial.printf ("handleRoot: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
+
+//   if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local")) 
+   {
+      Serial.println ("Request redirected to captive portal");
+      server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
+      server.sendHeader ("Pragma", "no-cache");
+      server.sendHeader ("Expires", "-1");
+
+      server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
+      String s = "abc";
+      s.replace ("abc", "de");
+      Serial.printf ("Re %s\n", s.c_str());
+      server.send (302, "text/html", "   <html>      <head>         <title>Network Authentication Required</title>         <meta http-equiv=\"refresh\"               content=\"0; url=http://"+server.client().localIP().toString()+ "/legal.htm\">      </head>      <body>        <p>You need to <a href=\"https://login.example.net/\">         authenticate with the local network</a> in order to gain        access.</p>      </body>   </html>");
+
+   }
 }
 
 void setupWebServer (void)
@@ -214,7 +273,12 @@ void setupWebServer (void)
    server.on ("/questions.js", HTTP_GET,  handlequestionsjs);
    server.on ("/radio2.css", HTTP_GET,  handleRadioCSS);
    server.on ("/favicon.ico", HTTP_GET, notFound);
-   
+
+   server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
+   server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 
+
+   server.collectHeaders ("Request-Time", "");
+
    server.begin ();
    yield ();
 

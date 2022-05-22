@@ -6,7 +6,6 @@
 void WriteEEData (int address, const void *data, size_t nbytes)
 {
   size_t    i;
-  uint8_t   by;
   uint8_t   *p = (uint8_t *) data;
 
   for (i=0; i<nbytes; i++)
