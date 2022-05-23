@@ -30,6 +30,7 @@ extern const char debugdata_js[];
 extern const char radio2_css[];
 extern const char banned_js[];
 extern const char banned_html[];
+extern const char redirect_html[];
 
 #if defined (ESP8266WEBSERVER_H)
   extern ESP8266WebServer server;

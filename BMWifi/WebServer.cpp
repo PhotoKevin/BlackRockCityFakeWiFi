@@ -11,7 +11,7 @@ long long clientAddress ();
 static bool allowSend (const char *type, String page)
 {
    bool rc = false;
-   Serial.printf ("Checking allowed: %s(%s)",  page.c_str(), type);
+   Serial.printf ("Checking allowed: %s(%s)\n",  page.c_str(), type);
 
    Serial.printf (" isBanned? -> %d\n", isBanned (clientAddress()));
 
@@ -53,10 +53,6 @@ static void send (const char *type, const char *txt)
 }
 
 // https://www.esp8266.com/viewtopic.php?f=8&t=4307
-
-
-#include <U8x8lib.h>
-
 long long mac2ll (uint8 *mac)
 {
    long long address = 0;
@@ -83,7 +79,7 @@ long long ip2ll (IPAddress ip)
    return address;   
 }
 
-long long clientAddress ()
+long long clientAddress (void)
 {
    long long address = 0;
    WiFiClient cli = server.client ();
@@ -99,10 +95,10 @@ long long clientAddress ()
       {
          address = mac2ll (station_list->bssid);
          
-         auto station_ip = station.toString().c_str();
+         String station_ip = station.toString();
          char station_mac[18] = {0};
          sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
-         Serial.printf("%d. %s %s", i++, station_ip, station_mac);
+         Serial.printf ("%d. IP: %s MAC: %s\n", i++, station_ip.c_str(), station_mac);
          station_list = STAILQ_NEXT(station_list, next);
       }   
    }
@@ -209,39 +205,19 @@ void handleBlocked (void)
 
 // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
 
-extern U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8;
-
-
-
-/** Is this an IP? */
-boolean isIp(String str) {
-  for (size_t i = 0; i < str.length(); i++) {
-    int c = str.charAt(i);
-    if (c != '.' && (c < '0' || c > '9')) {
-      return false;
-    }
-  }
-  return true;
-}
-
 void handlePortalCheck () 
 {
-   Serial.printf ("handleRoot: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
+   Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
 
-//   if (!isIp(server.hostHeader()) && server.hostHeader() != (String(myHostname) + ".local")) 
-   {
-      Serial.println ("Request redirected to captive portal");
-      server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
-      server.sendHeader ("Pragma", "no-cache");
-      server.sendHeader ("Expires", "-1");
+   Serial.println ("Request redirected to captive portal");
+   server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
+   server.sendHeader ("Pragma", "no-cache");
+   server.sendHeader ("Expires", "-1");
 
-      server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
-      String s = "abc";
-      s.replace ("abc", "de");
-      Serial.printf ("Re %s\n", s.c_str());
-      server.send (302, "text/html", "   <html>      <head>         <title>Network Authentication Required</title>         <meta http-equiv=\"refresh\"               content=\"0; url=http://"+server.client().localIP().toString()+ "/legal.htm\">      </head>      <body>        <p>You need to <a href=\"https://login.example.net/\">         authenticate with the local network</a> in order to gain        access.</p>      </body>   </html>");
-
-   }
+   server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
+   String content = redirect_html;
+   content.replace ("login.example.com", server.client().localIP().toString());
+   server.send (302, "text/html", content);
 }
 
 void setupWebServer (void)
@@ -255,8 +231,6 @@ void setupWebServer (void)
    sprintf (correctURL, "http://%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
   // Set up the endpoints for HTTP server
-//  server.on ("/donation", HTTP_POST, handlePage);
-//  server.on ("/donation", HTTP_GET,  handlePage);
    server.onNotFound (notFound);
 
    server.on ("/", HTTP_GET, handleLegal);

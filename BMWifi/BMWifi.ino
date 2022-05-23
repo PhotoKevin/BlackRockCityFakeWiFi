@@ -14,6 +14,8 @@
 #include <EEPROM.h>
 #include <Ticker.h>
 
+#include "Config.h"
+
 // https://github.com/olikraus/u8g2
 #include <U8x8lib.h>
 
@@ -29,28 +31,23 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 // You need to supply your own Secret.h defining 
 //#define SSID "<SSID>"      
 //#define PASS "<password>"  
-//#define APSSID  "<AP SSID>"
-//#define APPASS  "<AP password>"
-
 #include "Secret.h"
 
-const char *myHostname = "BRCWiFi";
-IPAddress apIP (8, 18, 8, 8);
-IPAddress netMsk (255, 255, 255, 0);
-
-
+const char *myHostname = HOST_NAME;
+IPAddress apIP (IP_ADDRESS);
+IPAddress netMsk (NET_MASK);
 
 ESP8266WebServer server (80);                         // HTTP server will listen at port 80
 const byte DNS_PORT = 53;
 
 DNSServer dnsServer;
 
-const int ledPin = 2;
-
 struct eeprom_data_t  EEData;
 int EEChanged = 0;
 
+#if defined (NOT_AP)
 void  ConnectToNetwork (void);
+#endif
 void  SetupAP (void);
 
 void setup (void)
@@ -61,11 +58,7 @@ void setup (void)
    u8x8.setPowerSave(0);
  
    u8x8.setFont (u8x8_font_chroma48medium8_r);
-   u8x8.drawString (0,0,"BRC Wifi");
-//   u8x8.refreshDisplay();    // only required for SSD1606/7  
-
-   pinMode (ledPin, OUTPUT);
-
+   u8x8.drawString (0, 0, myHostname);
    Serial.print ("\nBRC Wifi Starting\n");
 
    EEPROM.begin (128); // Can go to 4096, probably
@@ -88,9 +81,6 @@ void setup (void)
 }
 
 /// Setup the ESP8266 as an Access Point
-/// The APSSID and APPASS should have been 
-/// defined in Secret.h which was included 
-/// at the top.
 
 void SetupAP (void)
 {
@@ -98,20 +88,16 @@ void SetupAP (void)
    WiFi.mode (WIFI_AP);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
-   rc = WiFi.softAP (APSSID);
+   rc = WiFi.softAP (APSSID); // No password, this is an open access point
 
-//   rc = WiFi.softAP (APSSID, APPASS);
    Serial.printf ("softAP : %d\n", rc);
 
-   IPAddress ip = WiFi.softAPIP ();
-
-   char result[16];
-   sprintf (result, "AP is %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-   Serial.println (result);
+   Serial.print ("AP is ");
+   Serial.println (WiFi.softAPIP ().toString());
 
    // Set up a DNS server. 
    dnsServer.setErrorReplyCode (DNSReplyCode::NoError);
-   dnsServer.start (DNS_PORT, "*", ip);
+   dnsServer.start (DNS_PORT, "*", WiFi.softAPIP ());
 }
 
 /// Connect the ESP to a network
@@ -122,6 +108,7 @@ void SetupAP (void)
 /// You need to define your user/pw in Secret.h
 /// as included above
 
+#if defined (NOT_AP)
 void ConnectToNetwork (void)
 {
    char stat[20];
@@ -140,6 +127,7 @@ void ConnectToNetwork (void)
       delay (1000);
    }
 }
+#endif
 
 // https://android.stackexchange.com/questions/63481/how-does-android-determine-if-it-has-an-internet-connection
 //https://android.stackexchange.com/questions/170387/android-wifi-says-connected-no-internet-but-internet-works-just-fine
@@ -158,17 +146,17 @@ void DisplayOLEDStatus (void)
    bool refresh = false;
    time_t now = time (NULL);
 
-   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 5)
+   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 30)
       refresh = true;
 
    char buffer[32];
-   u8x8.drawString (0,0,"BRC Wifi");
+   u8x8.drawString (0, 0,"BRC Wifi");
 
    snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
    if (refresh)
    {
       Serial.println (buffer);
-      u8x8.drawString (0,1, buffer);
+      u8x8.drawString (0, 1, buffer);
       prevRedirects = EEData.totalRedirects;
    }
 
@@ -185,12 +173,11 @@ void DisplayOLEDStatus (void)
       strftime (buffer, sizeof buffer, "%FT%T", gmtime (&now));
       Serial.println (buffer);
       buffer[15] = '\0';
-      u8x8.drawString (0,3, buffer);
+      u8x8.drawString (0, 3, buffer);
       prevTime = now;
    }
 
    u8x8.refreshDisplay();    // only required for SSD1606/7  
-
 }
 
 
@@ -204,13 +191,16 @@ void loop (void)
       Serial.printf ("Connects: %d\n", noStats);
    }
 //   Serial.printf("Free Heap: %d Bytes\n", ESP.getFreeHeap());   
-   if (connectRequired) 
-   {
-      Serial.println ( "Connect requested" );
-      connectRequired = false;
-      ConnectToNetwork ();
-      lastConnectTry = millis();
-   }
+
+   #if defined (NOT_AP)
+      if (connectRequired) 
+      {
+         Serial.println ( "Connect requested" );
+         connectRequired = false;
+         ConnectToNetwork ();
+         lastConnectTry = millis();
+      }
+   #endif
    
 
    int currentStatus = WiFi.status();
@@ -279,15 +269,13 @@ String  WiFiStatus (int s)
 
 void DisplayStatus (void)
 {
-   char result[16];
-
    #if defined (NOT_AP)
-      sprintf (result, "localIP: %3d.%3d.%3d.%3d\n", WiFi.localIP()[0], WiFi.localIP()[1], WiFi.localIP()[2], WiFi.localIP()[3]);
-   #else  
-      sprintf (result, "AP: %d.%d.%d.%d\n", WiFi.softAPIP()[0], WiFi.softAPIP()[1], WiFi.softAPIP()[2], WiFi.softAPIP()[3]);
+      Serial.print ("localIP: ");
+      Serial.println (WiFi.localIP());
+   #else
+      Serial.print ("AP: ");
+      Serial.println (WiFi.softAPIP());
    #endif
-   
-   Serial.print (result);
 }
 
 
