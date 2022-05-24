@@ -50,6 +50,8 @@ void  ConnectToNetwork (void);
 #endif
 void  SetupAP (void);
 
+ADC_MODE(ADC_VCC);
+
 void setup (void)
 {
    Serial.begin (115200);                           // full speed to monitor
@@ -146,7 +148,7 @@ void DisplayOLEDStatus (void)
    bool refresh = false;
    time_t now = time (NULL);
 
-   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 30)
+   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 120)
       refresh = true;
 
    char buffer[32];
@@ -317,5 +319,7 @@ void client_status()
       i++;
       Serial.println();
    }
+   wifi_softap_free_station_info();
+
    delay(500);
 }

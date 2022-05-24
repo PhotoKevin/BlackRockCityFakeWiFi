@@ -21,3 +21,23 @@ questionSet =
       "commentary" : ""
    }
 ];
+
+currentStatus =
+{
+   "redirects" : 4,
+   "banned" : 1,
+   "lastActivity" : "1980-01-01",
+   "sdkVersion" : "0",
+   "bootVersion" : 0,
+   "chipID" : "0",
+   "cpuFreq" : 0,
+   "cycleCount" : 0,
+   "voltage" : 0,
+   "memoryFree" : 0,
+   "sketchSize" : 0,
+   "sketchFree" : 0,
+   "flashSize" : 0,
+   "flashSpeed" : 0,
+   "softApMac" : "a",
+   "softApIP" : "127"
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+   <!-- developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started -->
+   <head>
+      <meta charset="utf-8">
+      <title>BRC Open WiFi</title>
+      <link rel="stylesheet" href="brc.css">
+      <link rel="stylesheet" href="radio2.css">
+      <script src="status.js"></script>
+      <script src="debugdata.js"></script>
+      <script>
+         function myOnload ()
+         {
+            console.log("onload");
+            getStatus ();
+         }
+      </script>
+   </head>
+
+   <body onload="myOnload()">
+      <div class="top centerHorizontal" id="top">
+         BRC Open WiFi
+      </div>
+      <div class="main centerHorizontal" id="main">
+         <table>
+            <tr><td>Requests: </td><td id="requests"></td></tr>
+            <tr><td>Banned: </td><td id="banned"></td></tr>
+            <tr><td>Last Activity: </td><td id="lastActivity"></td></tr>
+            <tr><td>&nbsp;</td> </tr>
+            <tr><td>SDK Version: </td><td id="sdkVersion"></td></tr>
+            <tr><td>Boot Version: </td><td id="bootVersion"></td></tr>
+            <tr><td>Chip ID: </td><td id="chipID"></td></tr>
+            <tr><td>CPU Freq: </td><td id="cpuFreq"></td></tr>
+            <tr><td>Voltage: </td><td id="voltage"></td></tr>
+            <tr><td>Free Heap: </td><td id="memoryFree"></td></tr>
+            <tr><td>Sketch Size: </td><td id="sketchSize"></td></tr>
+            <tr><td>Sketch Free: </td><td id="sketchFree"></td></tr>
+            <tr><td>Flash Size: </td><td id="flashSize"></td></tr>
+            <tr><td>Soft AP Mac: </td><td id="softApMac"></td></tr>
+            <tr><td>Soft AP IP: </td><td id="softApIP"></td></tr>
+         </table>
+      </div>
+
+   </body>
+</html>

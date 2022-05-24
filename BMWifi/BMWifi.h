@@ -10,6 +10,7 @@ struct eeprom_data_t
 {
    int totalBanned;
    int totalRedirects;
+   time_t lastActivity;
 };
 extern int EEChanged;
 
@@ -31,6 +32,8 @@ extern const char radio2_css[];
 extern const char banned_js[];
 extern const char banned_html[];
 extern const char redirect_html[];
+extern const char status_html[];
+extern const char status_js[];
 
 #if defined (ESP8266WEBSERVER_H)
   extern ESP8266WebServer server;
@@ -47,6 +50,7 @@ void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 
 void client_status (void);
 
+String getSystemInformation (void);
 
 void expireBanned (void);
 int banExpires (long long address);

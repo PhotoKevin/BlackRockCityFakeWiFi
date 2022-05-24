@@ -85,8 +85,8 @@ long long clientAddress (void)
    WiFiClient cli = server.client ();
    IPAddress clientIP = server.client().remoteIP();
    
-   auto client_count = wifi_softap_get_station_num();
-   auto i = 1;
+   uint8_t client_count = wifi_softap_get_station_num();
+//   int i = 1;
    struct station_info *station_list = wifi_softap_get_station_info();
    while (station_list != NULL) 
    {
@@ -96,9 +96,9 @@ long long clientAddress (void)
          address = mac2ll (station_list->bssid);
          
          String station_ip = station.toString();
-         char station_mac[18] = {0};
-         sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
-         Serial.printf ("%d. IP: %s MAC: %s\n", i++, station_ip.c_str(), station_mac);
+//         char station_mac[18] = {0};
+//         sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
+//         Serial.printf ("%d. IP: %s MAC: %s\n", i++, station_ip.c_str(), station_mac);
          station_list = STAILQ_NEXT(station_list, next);
       }   
    }
@@ -111,6 +111,7 @@ long long clientAddress (void)
 }
 
 static void handleBanned (void)      {send ("text/html", banned_html);}
+
 static void handleLegal (void)       
 {
    EEData.totalRedirects += 1;
@@ -146,6 +147,7 @@ static void handleQuestion (void)
             memset (&tv, 0, sizeof tv);
             tv.tv_sec = nowtime;
             settimeofday (&tv, NULL);
+            EEData.lastActivity = nowtime;
 
            // set_system_time (2000);
          }
@@ -161,6 +163,9 @@ static void handleCheckboxCSS (void) {send ("text/css", checkbox_css);}
 static void handlequestionsjs (void) {send ("application/javascript", questions_js);}
 static void handleBannedJs (void)    {send ("application/javascript", banned_js);}
 static void handleDebugData (void)   {send ("application/javascript", debugdata_js);}
+static void handleStatusJs (void)    {send ("text/javascript", status_js);}
+static void handleStatus (void)      {send ("text/html", status_html);}
+
 
 static void notFound (void)          
 {
@@ -170,14 +175,16 @@ static void notFound (void)
 
 static void handleQuestionJson (void) 
 {
+   Serial.println ("handle Ajax request");
    if (!server.hasArg ("request"))
       Serial.println ("Bad request");
    else
    {
       String request = server.arg ("request");
+      Serial.printf ("  Ajax reques of %s\n", request.c_str());
       if (request == "question")
          send ("application/javascript", questions_json);
-      else if (request = "expire")
+      else if (request == "expire")
       {
          char json[44];
          long long device = clientAddress ();
@@ -186,9 +193,15 @@ static void handleQuestionJson (void)
          snprintf (json, sizeof json, "{\"expire\" : \"%d\"}", expires);
          send ("application/javascript", json);
       }
+      else if (request == "status")
+      {
+         Serial.println ("call getSysInfo");
+         send ("application/javascript", getSystemInformation ().c_str());
+      }
       else
          Serial.printf ("Unknown request: %s\n", request.c_str());
    }
+      
 }
 
 
@@ -217,8 +230,12 @@ void handlePortalCheck ()
    server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
    String content = redirect_html;
    content.replace ("login.example.com", server.client().localIP().toString());
+   Serial.println ("send content");
+   Serial.println (content);
    server.send (302, "text/html", content);
+   Serial.println ("content sent");
 }
+
 
 void setupWebServer (void)
 {
@@ -247,6 +264,8 @@ void setupWebServer (void)
    server.on ("/questions.js", HTTP_GET,  handlequestionsjs);
    server.on ("/radio2.css", HTTP_GET,  handleRadioCSS);
    server.on ("/favicon.ico", HTTP_GET, notFound);
+   server.on ("/status", HTTP_GET, handleStatus);
+   server.on ("/status.js", HTTP_GET, handleStatusJs);
 
    server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
    server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 
@@ -256,5 +275,5 @@ void setupWebServer (void)
    server.begin ();
    yield ();
 
-   Serial.printf ("Listening at: %s\n", correctURL);
+   Serial.printf ("Listening at: %s\n", ip.toString ().c_str());
 }
