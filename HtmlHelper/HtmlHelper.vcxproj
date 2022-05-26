@@ -19,7 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="getopt_long.c" />
     <ClCompile Include="HtmlHelper.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="getopt.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

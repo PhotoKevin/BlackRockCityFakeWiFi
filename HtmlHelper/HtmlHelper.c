@@ -2,35 +2,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "getopt.h"
+
 #pragma warning(disable:4996)
+// Ignore Spelling: const
 
-void process (const char *filename)
+
+void processFile (FILE *fout, FILE *fin, const char *varname)
 {
-   char newfile[FILENAME_MAX];
-
-   char varname[FILENAME_MAX];
-
-
-   strcpy_s  (newfile, sizeof newfile, filename);
-   strcat_s (newfile, sizeof newfile, ".cpp");
-
-   char *pos = strrchr (filename, '\\');
-   if (pos != NULL)
-      strcpy_s (varname, sizeof varname, pos+1);
-   else
-      strcpy_s (varname, sizeof varname, filename);
-
-   pos = strchr (varname, '.');
-   if (pos != NULL)
-      *pos = '_';
-
-   FILE *fin = fopen (filename, "r");
-   FILE *fout = fopen (newfile, "w");
+   printf ("   varname is now %s\n", varname);
 
    if (fin != NULL && fout != NULL)
    {
-      fputs ("#include <Arduino.h>\n", fout);
-      fputs ("#include \"BMWifi.h\"\n", fout);
+      fputs ("\n\n", fout);
       fprintf (fout, "const char %s[] PROGMEM = \n", varname);
       int prevch = -1;
       while (!feof (fin) && !ferror (fin))
@@ -39,10 +23,6 @@ void process (const char *filename)
          if (NULL != fgets (input, sizeof input, fin))
          {
             fputs ("\"", fout);
-
-            //pos = strstr (input, "//");
-            //if (pos != NULL)
-            //   *pos = '\0';
 
             for (char* ch = input; *ch != '\0'; ch++)
             {
@@ -68,6 +48,59 @@ void process (const char *filename)
 
       fputs (";\n", fout);
    }
+}
+
+/// <summary>
+/// Given a web file name such as index.html, figure out the appropriate 
+/// variable name index_html.
+/// </summary>
+/// <param name="filename">Name of the web file</param>
+/// <returns>The variable name</returns>
+const char *variableName (const char *filename)
+{
+   static char varname[FILENAME_MAX];
+
+   printf ("proc %s\n", filename);
+   // Throw away any path portion.
+   char *pos = strrchr (filename, '\\');
+   if (pos != NULL)
+      strcpy_s (varname, sizeof varname, pos+1);
+   else
+      strcpy_s (varname, sizeof varname, filename);
+
+   // Replace the period between the filename and the extension with
+   // an underscore.
+   pos = strchr (varname, '.');
+   if (pos != NULL)
+      *pos = '_';
+
+   printf ("    -> %s\n", varname);
+   return varname;
+}
+
+void process (const char *outputfile, const char *filename, const char *includefile)
+{
+   char newfile[FILENAME_MAX];
+   FILE *fout;
+
+   // NULL means each input gets its own output.
+   if (outputfile == NULL)
+   {
+      strcpy_s  (newfile, sizeof newfile, filename);
+      strcat_s (newfile, sizeof newfile, ".cpp");
+      fout = fopen (newfile, "w");
+      fputs ("#include <Arduino.h>\n", fout);
+      if (includefile != NULL)
+         fprintf (fout, "#include \"%s\"\n", includefile);
+   }
+   else
+   {
+      fout = fopen (outputfile, "a");
+   }
+
+   FILE *fin = fopen (filename, "r");
+
+   processFile (fout, fin, variableName (filename));
 
    if (fin == NULL)
       perror (filename);
@@ -80,13 +113,60 @@ void process (const char *filename)
       fclose (fout);
 }
 
+void usage (void)
+{
+   exit (EXIT_FAILURE);
+}
 
 void main (int argc, char *argv[])
 {
-   for (int i=1; i<argc; i++)
+   char *outputfile = NULL;
+   char *includefile = NULL;
+
+   static struct option longopts[] = 
    {
-      printf ("%s\n", argv[i]);
-      process (argv[i]);
+      { "include", required_argument, NULL, 'i' },
+      { "output", required_argument, NULL, 'o' },
+	   { NULL, 	0,			NULL, 		0 }
+   };
+
+   int ch;
+   while ((ch = getopt_long(argc, argv, "o:", longopts, NULL)) != -1)
+   {
+   	switch (ch) 
+      {
+   	case 'o':
+         outputfile = optarg;
+		   break;
+
+      case 'i':
+         includefile = optarg;
+         break;
+
+   	default:
+	   	usage();
+		   /* NOTREACHED */
+	   }
+   }
+   argc -= optind;
+   argv += optind;
+
+   if (outputfile != NULL)
+   {
+      FILE *fout = fopen (outputfile, "w");
+      if (fout != NULL)
+      {
+         fputs ("#include <Arduino.h>\n", fout);
+         if (includefile != NULL)
+            fprintf (fout, "#include \"%s\"\n", includefile);
+         fclose (fout);
+      }
+   }
+
+   for (int i=0; i<argc; i++)
+   {
+      printf ("ARG: %s\n", argv[i]);
+      process (outputfile, argv[i], includefile);
    }
 
    exit (EXIT_SUCCESS);
