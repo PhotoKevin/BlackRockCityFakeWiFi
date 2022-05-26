@@ -13,11 +13,13 @@ static bool allowSend (const char *type, String page)
    bool rc = false;
    Serial.printf ("Checking allowed: %s(%s)\n",  page.c_str(), type);
 
-   Serial.printf (" isBanned? -> %d\n", isBanned (clientAddress()));
+   bool banned = isBanned (clientAddress());
+   yield ();
+   Serial.printf (" isBanned? -> %d\n", banned);
 
    if (NULL == strstr (type, "html"))
       rc = true;
-   else if (!isBanned (clientAddress ()))
+   else if (! banned)
       rc = true;
    else if (server.uri() == "/blocked.hmtl")
       rc = true;
@@ -31,24 +33,25 @@ static bool allowSend (const char *type, String page)
 static void send (const char *type, const char *txt)
 {
    IPAddress clientIP = server.client().remoteIP();
-   Serial.print (server.uri ());
+   Serial.printf ("%s%s ", server.hostHeader ().c_str (), server.uri ().c_str());
    Serial.printf ("(%s) -> %s\n", type, clientIP.toString ().c_str ());
    
-   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
+//   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
    server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
    server.sendHeader ("Pragma", "no-cache");
    server.sendHeader ("Expires", "-1");
 
-   server.send (200, type, "");
+   
    if (allowSend (type, server.uri ()))
    {
-      server.sendContent (txt);
+      server.send (200, type, txt);
    }
    else
    {
-      server.sendContent (banned_html);
+      server.send (200, type, banned_html);
    }
    yield ();
+//   server.stop ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 }
 
@@ -111,6 +114,15 @@ long long clientAddress (void)
 }
 
 static void handleBanned (void)      {send ("text/html", banned_html);}
+static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
+static void handlebrccss (void)      {send ("text/css", brc_css);}
+static void handleCheckboxCSS (void) {send ("text/css", checkbox_css);}
+
+static void handlequestionsjs (void) {send ("application/javascript", questions_js);}
+static void handleBannedJs (void)    {send ("application/javascript", banned_js);}
+static void handleDebugData (void)   {send ("application/javascript", debugdata_js);}
+static void handleStatusJs (void)    {send ("text/javascript", status_js);}
+static void handleStatus (void)      {send ("text/html", status_html);}
 
 static void handleLegal (void)       
 {
@@ -118,6 +130,8 @@ static void handleLegal (void)
    EEChanged = 1;
    send ("text/html", legal_html);
 }
+
+
 static void handleQuestion (void)    
 {
    if (server.hasArg ("timeStamp"))
@@ -148,30 +162,16 @@ static void handleQuestion (void)
             tv.tv_sec = nowtime;
             settimeofday (&tv, NULL);
             EEData.lastActivity = nowtime;
-
-           // set_system_time (2000);
+            EEChanged = 1;
          }
       }
    }
+
    send ("text/html", question_html);
 }
 
-static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
-static void handlebrccss (void)      {send ("text/css", brc_css);}
-static void handleCheckboxCSS (void) {send ("text/css", checkbox_css);}
-
-static void handlequestionsjs (void) {send ("application/javascript", questions_js);}
-static void handleBannedJs (void)    {send ("application/javascript", banned_js);}
-static void handleDebugData (void)   {send ("application/javascript", debugdata_js);}
-static void handleStatusJs (void)    {send ("text/javascript", status_js);}
-static void handleStatus (void)      {send ("text/html", status_html);}
 
 
-static void notFound (void)          
-{
-   Serial.printf ("Not found: %s\n", server.uri ().c_str());
-   server.send (404, "text/html", "");
-}
 
 static void handleQuestionJson (void) 
 {
@@ -230,10 +230,22 @@ void handlePortalCheck ()
    server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
    String content = redirect_html;
    content.replace ("login.example.com", server.client().localIP().toString());
-   Serial.println ("send content");
-   Serial.println (content);
+   // Serial.println ("send content");
+   // Serial.println (content);
    server.send (302, "text/html", content);
    Serial.println ("content sent");
+}
+
+static void notFound (void)          
+{
+   Serial.printf ("Not found: %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
+   if (server.hostHeader() == "http://" + server.client().localIP().toString())
+   {
+      Serial.println ("Send 404");
+      server.send (404, "text/html", "");
+   }
+   else
+      handlePortalCheck ();
 }
 
 
@@ -269,6 +281,8 @@ void setupWebServer (void)
 
    server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
    server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 
+   server.on("/connecttest.txt", handlePortalCheck);  // Windows 10 captive portal check.
+   server.on("/redirect", handlePortalCheck);  // Windows 10 captive portal check.
 
    server.collectHeaders ("Request-Time", "");
 
