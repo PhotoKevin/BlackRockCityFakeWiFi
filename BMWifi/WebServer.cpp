@@ -127,6 +127,8 @@ static void handleStatus (void)      {send ("text/html", status_html);}
 static void handleLegal (void)       
 {
    EEData.totalRedirects += 1;
+   if (clockSet)
+      EEData.lastActivity = time (NULL);
    EEChanged = 1;
    send ("text/html", legal_html);
 }
@@ -162,6 +164,7 @@ static void handleQuestion (void)
             tv.tv_sec = nowtime;
             settimeofday (&tv, NULL);
             EEData.lastActivity = nowtime;
+            clockSet = true;
             EEChanged = 1;
          }
       }
@@ -209,6 +212,12 @@ void handleBlocked (void)
 {
    long long device = clientAddress ();
    send ("text/html", blocked_html); 
+
+   EEData.totalBanned += 1;
+   if (clockSet)
+      EEData.lastActivity = time (NULL);
+   EEChanged = 1;
+   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 
    banDevice (device);
    if (isBanned (device))

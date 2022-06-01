@@ -34,6 +34,8 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 #include "Secret.h"
 
 const char *myHostname = HOST_NAME;
+bool clockSet = false;
+
 IPAddress apIP (IP_ADDRESS);
 IPAddress netMsk (NET_MASK);
 
@@ -142,41 +144,32 @@ int laststatus = WL_IDLE_STATUS;
 
 void DisplayOLEDStatus (void)
 {
-   static time_t prevTime = 0;
+   static time_t prevActivity = 0;
    static int prevRedirects = -1;
    static int prevBanned = -1;
-   bool refresh = false;
-   time_t now = time (NULL);
 
-   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || difftime (now, prevTime) > 120)
-      refresh = true;
-
-   char buffer[32];
-   u8x8.drawString (0, 0,"BRC Wifi");
-
-   snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
-   if (refresh)
+   // Work out if we need to refresh the display. Do it as a batch so the serial output is all or nothing
+   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || prevActivity != EEData.lastActivity)
    {
+      prevRedirects = EEData.totalRedirects;
+      prevBanned = EEData.totalBanned;
+      prevActivity = EEData.lastActivity;
+
+      char buffer[32];
+      u8x8.drawString (0, 0,"BRC Wifi");
+
+      snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
       Serial.println (buffer);
       u8x8.drawString (0, 1, buffer);
-      prevRedirects = EEData.totalRedirects;
-   }
 
-   snprintf (buffer, sizeof buffer, "Banned %d", EEData.totalBanned);
-   if (refresh)
-   {
+      snprintf (buffer, sizeof buffer, "Banned %d", EEData.totalBanned);
       Serial.println (buffer);
-      u8x8.drawString (0,2, buffer);
-      prevBanned = EEData.totalBanned;
-   }
+      u8x8.drawString (0 ,2, buffer);
 
-   if (refresh)
-   { 
-      strftime (buffer, sizeof buffer, "%FT%T", gmtime (&now));
+      strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
       buffer[15] = '\0';
       u8x8.drawString (0, 3, buffer);
-      prevTime = now;
    }
 
    u8x8.refreshDisplay();    // only required for SSD1606/7  

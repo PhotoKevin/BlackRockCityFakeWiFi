@@ -19,6 +19,7 @@ extern const char *myHostname;
 extern struct eeprom_data_t  EEData;
 const int EEDataAddr = 40;
 extern int displayRows;
+extern bool clockSet;
 
 extern const char checkbox_css [];
 extern const char brc_css [];

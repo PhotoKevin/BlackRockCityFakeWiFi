@@ -46,8 +46,6 @@ void banDevice (long long address)
 {
    Serial.printf ("Banning %llx\n", address);
    time_t currentTime = time (NULL);
-   EEData.totalBanned += 1;
-   EEChanged = 1;
    for (int i=0; i<NUM_BANNED; i++)
    {
       if (banned[i].timestamp == (time_t) 0)
@@ -58,7 +56,6 @@ void banDevice (long long address)
       }
    }
 
-   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
    /* If there were no empty slots, they get a free pass */
 }
 
