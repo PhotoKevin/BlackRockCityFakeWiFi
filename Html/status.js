@@ -52,15 +52,16 @@ var currentStatus;
       document.getElementById ("bootVersion").innerText = currentStatus.bootVersion;
       document.getElementById ("chipID").innerText = currentStatus.chipID;
       document.getElementById ("cpuFreq").innerText = currentStatus.cpuFreq;
-      document.getElementById ("cycleCount").innerText = currentStatus.cycleCount;
+//      document.getElementById ("cycleCount").innerText = currentStatus.cycleCount;
       document.getElementById ("voltage").innerText = currentStatus.voltage;
       document.getElementById ("memoryFree").innerText = currentStatus.memoryFree;
       document.getElementById ("sketchSize").innerText = currentStatus.sketchSize;
       document.getElementById ("sketchFree").innerText = currentStatus.sketchFree;
-      document.getElementById ("flashSpeed").innerText = currentStatus.flashSpeed;
+//      document.getElementById ("flashSpeed").innerText = currentStatus.flashSpeed;
       document.getElementById ("flashSize").innerText = currentStatus.flashSize;
       document.getElementById ("softApMac").innerText = currentStatus.softApMac;
       document.getElementById ("softApIP").innerText = currentStatus.softApIP;
+      document.getElementById ("softApIP").innerText = jscd.os;
 
    }
 }
