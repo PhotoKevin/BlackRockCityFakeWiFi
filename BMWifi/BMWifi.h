@@ -11,6 +11,8 @@ struct eeprom_data_t
    int totalBanned;
    int totalRedirects;
    time_t lastActivity;
+   int androidCount;
+   int iPhoneCount;
 };
 extern int EEChanged;
 

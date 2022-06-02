@@ -48,6 +48,9 @@ var currentStatus;
       document.getElementById ("banned").innerText = currentStatus.banned;
       document.getElementById ("lastActivity").innerText = currentStatus.lastActivity;
 
+      document.getElementById ("iPhoneCount").innerText = currentStatus.iPhoneCount;
+      document.getElementById ("androidCount").innerText = currentStatus.androidCount;
+
       document.getElementById ("sdkVersion").innerText = currentStatus.sdkVersion;
       document.getElementById ("bootVersion").innerText = currentStatus.bootVersion;
       document.getElementById ("chipID").innerText = currentStatus.chipID;
@@ -61,7 +64,5 @@ var currentStatus;
       document.getElementById ("flashSize").innerText = currentStatus.flashSize;
       document.getElementById ("softApMac").innerText = currentStatus.softApMac;
       document.getElementById ("softApIP").innerText = currentStatus.softApIP;
-      document.getElementById ("softApIP").innerText = jscd.os;
-
    }
 }

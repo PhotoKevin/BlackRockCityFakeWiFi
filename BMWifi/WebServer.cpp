@@ -113,6 +113,7 @@ long long clientAddress (void)
    return address;
 }
 
+
 static void handleBanned (void)      {send ("text/html", banned_html);}
 static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
 static void handlebrccss (void)      {send ("text/css", brc_css);}
@@ -126,6 +127,13 @@ static void handleStatus (void)      {send ("text/html", status_html);}
 
 static void handleLegal (void)       
 {
+   String userAgent = server.header("User-Agent");
+
+   if (userAgent.indexOf ("Android") >= 0)
+      EEData.androidCount++;
+   else if (userAgent.indexOf ("iPhone") >= 0)
+      EEData.iPhoneCount++;
+   
    EEData.totalRedirects += 1;
    if (clockSet)
       EEData.lastActivity = time (NULL);
@@ -248,7 +256,7 @@ void handlePortalCheck ()
 static void notFound (void)          
 {
    Serial.printf ("Not found: %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
-   if (server.hostHeader() == "http://" + server.client().localIP().toString())
+   if (server.hostHeader() == server.client().localIP().toString())
    {
       Serial.println ("Send 404");
       server.send (404, "text/html", "");
@@ -293,7 +301,7 @@ void setupWebServer (void)
    server.on("/connecttest.txt", handlePortalCheck);  // Windows 10 captive portal check.
    server.on("/redirect", handlePortalCheck);  // Windows 10 captive portal check.
 
-   server.collectHeaders ("Request-Time", "");
+   server.collectHeaders ("Request-Time", "User-Agent", "");
 
    server.begin ();
    yield ();

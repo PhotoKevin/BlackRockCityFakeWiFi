@@ -27,6 +27,8 @@ currentStatus =
    "redirects" : 4,
    "banned" : 1,
    "lastActivity" : "1980-01-01",
+   "iPhoneCount" : 1,
+   "androidCount" : 2,
    "sdkVersion" : "0",
    "bootVersion" : 0,
    "chipID" : "0",

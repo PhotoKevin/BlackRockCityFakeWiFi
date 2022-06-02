@@ -15,7 +15,7 @@ String getSystemInformation (void)
    //DynamicJsonDocument jsonBuffer(1280);
  //  JsonObject root = jsonBuffer.as<JsonObject>();
 
-   const int capacity = JSON_OBJECT_SIZE(19);
+   const int capacity = JSON_OBJECT_SIZE(22);
    StaticJsonDocument<capacity> root;
 
    char buffer[32];
@@ -27,6 +27,9 @@ String getSystemInformation (void)
    root["banned"] = EEData.totalBanned;
    root["redirects"] = EEData.totalRedirects;
    root["lastActivity"] = buffer;
+   root["iPhoneCount"] = EEData.iPhoneCount;
+   root["androidCount"] = EEData.androidCount;
+
    root["sdkVersion"] = ESP.getSdkVersion();
    root["bootVersion"] = ESP.getBootVersion();
    root["bootMode"] = ESP.getBootMode();
