@@ -40,29 +40,32 @@ var currentStatus;
       }
    }
 
-
+   function setElementInnerText (elementID, innerText)
+   {
+      let id = document.getElementById (elementID);
+      if (id != null)
+         id.innerText = innerText;
+   }
 
    function displayStatus ()
    {
-      document.getElementById ("requests").innerText = currentStatus.redirects;
-      document.getElementById ("banned").innerText = currentStatus.banned;
-      document.getElementById ("lastActivity").innerText = currentStatus.lastActivity;
+      setElementInnerText ("requests", currentStatus.redirects);
+      setElementInnerText ("banned", currentStatus.banned);
+      setElementInnerText ("lastActivity", currentStatus.lastActivity);
 
-      document.getElementById ("iPhoneCount").innerText = currentStatus.iPhoneCount;
-      document.getElementById ("androidCount").innerText = currentStatus.androidCount;
+      setElementInnerText ("iPhoneCount", currentStatus.iPhoneCount);
+      setElementInnerText ("androidCount", currentStatus.androidCount);
 
-      document.getElementById ("sdkVersion").innerText = currentStatus.sdkVersion;
-      document.getElementById ("bootVersion").innerText = currentStatus.bootVersion;
-      document.getElementById ("chipID").innerText = currentStatus.chipID;
-      document.getElementById ("cpuFreq").innerText = currentStatus.cpuFreq;
-//      document.getElementById ("cycleCount").innerText = currentStatus.cycleCount;
-      document.getElementById ("voltage").innerText = currentStatus.voltage;
-      document.getElementById ("memoryFree").innerText = currentStatus.memoryFree;
-      document.getElementById ("sketchSize").innerText = currentStatus.sketchSize;
-      document.getElementById ("sketchFree").innerText = currentStatus.sketchFree;
-//      document.getElementById ("flashSpeed").innerText = currentStatus.flashSpeed;
-      document.getElementById ("flashSize").innerText = currentStatus.flashSize;
-      document.getElementById ("softApMac").innerText = currentStatus.softApMac;
-      document.getElementById ("softApIP").innerText = currentStatus.softApIP;
+      setElementInnerText ("sdkVersion", currentStatus.sdkVersion);
+      setElementInnerText ("bootVersion", currentStatus.bootVersion);
+      setElementInnerText ("chipID", currentStatus.chipID);
+      setElementInnerText ("cpuFreq", currentStatus.cpuFreq);
+      setElementInnerText ("voltage", currentStatus.voltage);
+      setElementInnerText ("memoryFree", currentStatus.memoryFree);
+      setElementInnerText ("sketchSize", currentStatus.sketchSize);
+      setElementInnerText ("sketchFree", currentStatus.sketchFree);
+      setElementInnerText ("flashSize", currentStatus.flashSize);
+      setElementInnerText ("softApMac", currentStatus.softApMac);
+      setElementInnerText ("softApIP", currentStatus.softApIP);
    }
 }
