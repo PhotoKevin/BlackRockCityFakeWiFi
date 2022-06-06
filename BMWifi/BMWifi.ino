@@ -142,6 +142,24 @@ long lastConnectTry = 0;
 int laststatus = WL_IDLE_STATUS;
 
 
+// Pad a string with blanks.
+// This is used to clear to end-of-line on the OLE display
+static void pad (char *str, size_t strsize)
+{
+   char *p = str + strlen (str);
+   while (p - str < strsize-1)
+   {
+      *p++ = ' ';
+      *p = '\0';
+   }
+}
+
+// 0123456789012345
+// BRC WiFi
+// Red xxx Ban xxx
+// Batt xxxx
+// 22-01-01 12:00
+
 void DisplayOLEDStatus (void)
 {
    static time_t prevActivity = 0;
@@ -155,18 +173,21 @@ void DisplayOLEDStatus (void)
       prevBanned = EEData.totalBanned;
       prevActivity = EEData.lastActivity;
 
-      char buffer[32];
+      char buffer[17];
       u8x8.drawString (0, 0,"BRC Wifi");
 
-      snprintf (buffer, sizeof buffer, "Redirects %d  ", EEData.totalRedirects);
+      snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.totalRedirects, EEData.totalBanned);
+      pad (buffer, sizeof buffer);
       Serial.println (buffer);
       u8x8.drawString (0, 1, buffer);
 
-      snprintf (buffer, sizeof buffer, "Banned %d", EEData.totalBanned);
+      snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
+      pad (buffer, sizeof buffer);
       Serial.println (buffer);
-      u8x8.drawString (0 ,2, buffer);
+      u8x8.drawString (0, 2, buffer);
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
+      pad (buffer, sizeof buffer);
       Serial.println (buffer);
       buffer[15] = '\0';
       u8x8.drawString (0, 3, buffer);
