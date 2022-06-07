@@ -33,7 +33,7 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 //#define PASS "<password>"  
 #include "Secret.h"
 
-const char *myHostname = HOST_NAME;
+//const char *myHostname = HOST_NAME;
 bool clockSet = false;
 
 IPAddress apIP (IP_ADDRESS);
@@ -52,7 +52,7 @@ void  ConnectToNetwork (void);
 #endif
 void  SetupAP (void);
 
-ADC_MODE(ADC_VCC);
+ADC_MODE(ADC_VCC);      // Needed to make the ESP.getVCC function work.
 
 void setup (void)
 {
@@ -62,10 +62,32 @@ void setup (void)
    u8x8.setPowerSave(0);
  
    u8x8.setFont (u8x8_font_chroma48medium8_r);
-   u8x8.drawString (0, 0, myHostname);
-   Serial.print ("\nBRC Wifi Starting\n");
+   Serial.print ("\nBMWifi Starting\n");
 
    EEPROM.begin (128); // Can go to 4096, probably
+   ReadEEData (EEDataAddr, &EEData, sizeof EEData);
+   if (EEData.eepromDataSize != sizeof EEData)
+   {
+      char ip[] = DEFAULT_IPADDRESS;
+      char mask[] = DEFAULT_NETMASK;
+      char master[] = DEFAULT_MASTER;
+      memset (&EEData, 0, sizeof EEData);
+      EEData.eepromDataSize = sizeof EEData;
+      strncpy (EEData.SSID, DEFAULT_SSID, sizeof EEData.SSID);
+      strncpy (EEData.username, DEFAULT_ADMIN, sizeof EEData.username);
+      strncpy (EEData.password, DEFAULT_PASSWORD, sizeof EEData.password);
+      strncpy (EEData.hostname, DEFAULT_HOSTNAME, sizeof EEData.hostname);
+      for (int i=0; i<4; i++)
+      {
+         EEData.ipAddress[i] = ip[i];
+         EEData.netmask[i] = mask[i];
+      }
+
+      for (int i=0; i<6; i++)
+         EEData.masterDevice[i] = master[i];
+
+      EEChanged = 1;
+   }
   
    #if defined (NOT_AP)
       ConnectToNetwork ();
@@ -76,7 +98,6 @@ void setup (void)
    setupWebServer ();
    yield ();
 
-   ReadEEData (EEDataAddr, &EEData, sizeof EEData);
    if (EEData.totalBanned < 0)
       memset (&EEData, 0, sizeof EEData);
 
@@ -92,7 +113,7 @@ void SetupAP (void)
    WiFi.mode (WIFI_AP);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
-   rc = WiFi.softAP (APSSID); // No password, this is an open access point
+   rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
 
    Serial.printf ("softAP : %d\n", rc);
 
@@ -133,10 +154,6 @@ void ConnectToNetwork (void)
 }
 #endif
 
-// https://android.stackexchange.com/questions/63481/how-does-android-determine-if-it-has-an-internet-connection
-//https://android.stackexchange.com/questions/170387/android-wifi-says-connected-no-internet-but-internet-works-just-fine
-//https://www.hackster.io/rayburne/esp8266-captive-portal-5798ff
-
 boolean connectRequired;
 long lastConnectTry = 0;
 int laststatus = WL_IDLE_STATUS;
@@ -154,6 +171,7 @@ static void pad (char *str, size_t strsize)
    }
 }
 
+// The OLED is 4 rows of 16 characters.
 // 0123456789012345
 // BRC WiFi
 // Red xxx Ban xxx
@@ -174,7 +192,7 @@ void DisplayOLEDStatus (void)
       prevActivity = EEData.lastActivity;
 
       char buffer[17];
-      u8x8.drawString (0, 0,"BRC Wifi");
+      u8x8.drawString (0, 0, EEData.hostname);
 
       snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.totalRedirects, EEData.totalBanned);
       pad (buffer, sizeof buffer);
@@ -189,7 +207,6 @@ void DisplayOLEDStatus (void)
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       pad (buffer, sizeof buffer);
       Serial.println (buffer);
-      buffer[15] = '\0';
       u8x8.drawString (0, 3, buffer);
    }
 
@@ -200,6 +217,8 @@ void DisplayOLEDStatus (void)
 void loop (void)
 {
    DisplayOLEDStatus ();
+   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
+
    static int noStats = -1;
    if (noStats != WiFi.softAPgetStationNum())
    {
@@ -241,7 +260,7 @@ void loop (void)
          Serial.println (WiFi.localIP());
       
          // Setup MDNS responder
-         if (!MDNS.begin(myHostname)) 
+         if (!MDNS.begin(EEData.hostname)) 
             Serial.println("Error setting up MDNS responder!");
          else 
          {
@@ -256,8 +275,6 @@ void loop (void)
       }
    }
   
-   
-   /////////////
    dnsServer.processNextRequest();
    server.handleClient ();  // checks for incoming messages
     

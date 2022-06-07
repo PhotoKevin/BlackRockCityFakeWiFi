@@ -8,11 +8,19 @@ struct banned_t
 
 struct eeprom_data_t
 {
+   uint eepromDataSize;
    int totalBanned;
    int totalRedirects;
    time_t lastActivity;
    int androidCount;
    int iPhoneCount;
+   char SSID[33];    // IEEE 802.11 defines a max SSID of 32 bytes
+   char hostname[33];
+   char username[33];
+   char password[33];
+   uint8_t masterDevice[6];
+   uint8_t ipAddress[4];
+   uint8_t netmask[4];
 };
 extern int EEChanged;
 
@@ -37,6 +45,7 @@ extern const char banned_html[];
 extern const char redirect_html[];
 extern const char status_html[];
 extern const char status_js[];
+extern const char bmwifi_js[];
 
 #if defined (ESP8266WEBSERVER_H)
   extern ESP8266WebServer server;

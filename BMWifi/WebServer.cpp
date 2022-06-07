@@ -30,32 +30,34 @@ static bool allowSend (const char *type, String page)
    return rc;
 }
 
+static void sendHeaders (void)
+{
+   server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
+   server.sendHeader ("Pragma", "no-cache");
+   server.sendHeader ("Expires", "-1");
+
+   char title[200];
+   snprintf (title, sizeof title, "title=%s", EEData.SSID);
+   server.sendHeader ("Set-Cookie", title);
+}
+
 static void send (const char *type, const char *txt)
 {
    IPAddress clientIP = server.client().remoteIP();
    Serial.printf ("%s%s ", server.hostHeader ().c_str (), server.uri ().c_str());
    Serial.printf ("(%s) -> %s\n", type, clientIP.toString ().c_str ());
-   
+   sendHeaders ();
 //   server.setContentLength (CONTENT_LENGTH_UNKNOWN);
-   server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
-   server.sendHeader ("Pragma", "no-cache");
-   server.sendHeader ("Expires", "-1");
-
    
    if (allowSend (type, server.uri ()))
-   {
       server.send (200, type, txt);
-   }
    else
-   {
       server.send (200, type, banned_html);
-   }
+
    yield ();
 //   server.stop ();
-   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 }
 
-// https://www.esp8266.com/viewtopic.php?f=8&t=4307
 long long mac2ll (uint8 *mac)
 {
    long long address = 0;
@@ -101,7 +103,7 @@ long long clientAddress (void)
          String station_ip = station.toString();
 //         char station_mac[18] = {0};
 //         sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
-//         Serial.printf ("%d. IP: %s MAC: %s\n", i++, station_ip.c_str(), station_mac);
+//         Serial.printf ("%d. IP: %s MAC: %s\n", 0, station_ip.c_str(), station_mac);
          station_list = STAILQ_NEXT(station_list, next);
       }   
    }
@@ -113,6 +115,14 @@ long long clientAddress (void)
    return address;
 }
 
+bool isMasterDevice (void)
+{
+//   Serial.printf ("%llx", clientAddress ());
+//   Serial.printf (" vs %llx\n", mac2ll (EEData.masterDevice));
+   return clientAddress () == mac2ll (EEData.masterDevice);
+   
+}
+
 
 static void handleBanned (void)      {send ("text/html", banned_html);}
 static void handleRadioCSS (void)    {send ("text/css", radio2_css);}
@@ -121,6 +131,7 @@ static void handleCheckboxCSS (void) {send ("text/css", checkbox_css);}
 
 static void handlequestionsjs (void) {send ("application/javascript", questions_js);}
 static void handleBannedJs (void)    {send ("application/javascript", banned_js);}
+static void handleBMWifiJs (void)    {send ("application/javascript", bmwifi_js);}
 static void handleDebugData (void)   {send ("application/javascript", debugdata_js);}
 static void handleStatusJs (void)    {send ("text/javascript", status_js);}
 static void handleStatus (void)      {send ("text/html", status_html);}
@@ -129,12 +140,16 @@ static void handleLegal (void)
 {
    String userAgent = server.header("User-Agent");
 
-   if (userAgent.indexOf ("Android") >= 0)
-      EEData.androidCount++;
-   else if (userAgent.indexOf ("iPhone") >= 0)
-      EEData.iPhoneCount++;
-   
-   EEData.totalRedirects += 1;
+   if (! isMasterDevice ())
+   {
+      if (userAgent.indexOf ("Android") >= 0)
+         EEData.androidCount++;
+      else if (userAgent.indexOf ("iPhone") >= 0)
+         EEData.iPhoneCount++;
+      
+      EEData.totalRedirects += 1;
+   }
+
    if (clockSet)
       EEData.lastActivity = time (NULL);
    EEChanged = 1;
@@ -221,11 +236,12 @@ void handleBlocked (void)
    long long device = clientAddress ();
    send ("text/html", blocked_html); 
 
-   EEData.totalBanned += 1;
+   if (!isMasterDevice ())
+      EEData.totalBanned += 1;
+      
    if (clockSet)
       EEData.lastActivity = time (NULL);
    EEChanged = 1;
-   SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 
    banDevice (device);
    if (isBanned (device))
@@ -239,12 +255,18 @@ void handlePortalCheck ()
 {
    Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
 
-   Serial.println ("Request redirected to captive portal");
-   server.sendHeader ("Cache-Control", "no-cache, no-store, must-revalidate");
-   server.sendHeader ("Pragma", "no-cache");
-   server.sendHeader ("Expires", "-1");
+   if (isMasterDevice ())
+   {
+      sendHeaders ();
 
-   server.sendHeader ("Location", String("http://") + server.client().localIP().toString(), true);
+      server.sendHeader ("Location", String ("http://") + server.client().localIP().toString() + "/status", true);
+      server.send (302, "text/html", "");
+   }
+
+   Serial.println ("Request redirected to captive portal");
+   sendHeaders ();
+
+   server.sendHeader ("Location", String ("http://") + server.client().localIP().toString(), true);
    String content = redirect_html;
    content.replace ("login.example.com", server.client().localIP().toString());
    // Serial.println ("send content");
@@ -295,6 +317,7 @@ void setupWebServer (void)
    server.on ("/favicon.ico", HTTP_GET, notFound);
    server.on ("/status", HTTP_GET, handleStatus);
    server.on ("/status.js", HTTP_GET, handleStatusJs);
+   server.on ("/bmwifi.js", HTTP_GET, handleBMWifiJs);
 
    server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
    server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 

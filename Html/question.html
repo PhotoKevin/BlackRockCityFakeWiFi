@@ -6,6 +6,7 @@
       <title>BRC Open WiFi</title>
       <link rel="stylesheet" href="brc.css">
       <link rel="stylesheet" href="radio2.css">
+      <script src="bmwifi.js"></script>
       <script src="questions.js"></script>
       <script src="debugdata.js"></script>
       <script>
@@ -13,6 +14,9 @@
          {
             let questionNumber = 0;
             console.log("onload");
+            let title = getCookie ("title");
+            document.title = title;
+            setElementInnerText ("top", title);
 
             questionNumber = getQuestionNumber ();
             console.log ("This is question " + questionNumber);

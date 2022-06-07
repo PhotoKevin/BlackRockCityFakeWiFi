@@ -40,12 +40,6 @@ var currentStatus;
       }
    }
 
-   function setElementInnerText (elementID, innerText)
-   {
-      let id = document.getElementById (elementID);
-      if (id != null)
-         id.innerText = innerText;
-   }
 
    function displayStatus ()
    {

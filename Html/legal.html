@@ -6,6 +6,7 @@
    <title>BRC Open WiFi</title>
    <link rel="stylesheet" href="brc.css">
    <link rel="stylesheet" href="checkbox.css">
+   <script src="bmwifi.js"></script>
    <script src="questions.js"></script>
    <style>
       .lic1
@@ -41,6 +42,15 @@
    </style>
 
    <script>
+      function myOnload ()
+      {
+         console.log("onload");
+         let title = getCookie ("title");
+         document.title = title;
+         setElementInnerText ("top", title);
+      }
+
+
       function enable ()
       {
          agreeButton.disabled = !agreeChk.checked;
@@ -48,7 +58,7 @@
    </script>
 </head>
 
-<body>
+<body onload="myOnload()">
    <div class="top centerHorizontal" id="top">
    <!-- 750x1334 -->
       BRC Open WiFi

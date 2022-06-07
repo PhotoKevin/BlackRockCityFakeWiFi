@@ -5,10 +5,14 @@
       <meta charset="utf-8">
       <title>BRC Open WiFi</title>
       <link rel="stylesheet" href="brc.css">
+      <script src="bmwifi.js"></script>
       <script>
          function myOnload ()
          {
             console.log("onload");
+            let title = getCookie ("title");
+            document.title = title;
+            setElementInnerText ("top", title);
 
             getExpirationTime ();
          }
