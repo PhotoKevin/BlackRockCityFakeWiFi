@@ -36,8 +36,8 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 //const char *myHostname = HOST_NAME;
 bool clockSet = false;
 
-IPAddress apIP (IP_ADDRESS);
-IPAddress netMsk (NET_MASK);
+IPAddress apIP(10,47,4,7);
+IPAddress netMsk(255,255,255,0);
 
 ESP8266WebServer server (80);                         // HTTP server will listen at port 80
 const byte DNS_PORT = 53;
@@ -64,13 +64,15 @@ void setup (void)
    u8x8.setFont (u8x8_font_chroma48medium8_r);
    Serial.print ("\nBMWifi Starting\n");
 
-   EEPROM.begin (128); // Can go to 4096, probably
+   EEPROM.begin (sizeof EEData); 
+   Serial.printf ("EEData is %d bytes\n", sizeof EEData);   
    ReadEEData (EEDataAddr, &EEData, sizeof EEData);
    if (EEData.eepromDataSize != sizeof EEData)
    {
-      char ip[] = DEFAULT_IPADDRESS;
-      char mask[] = DEFAULT_NETMASK;
-      char master[] = DEFAULT_MASTER;
+      Serial.println ("Setting default EEData values");
+      uint8_t ip[] = DEFAULT_IPADDRESS;
+      uint8_t mask[] = DEFAULT_NETMASK;
+      uint8_t master[] = DEFAULT_MASTER;
       memset (&EEData, 0, sizeof EEData);
       EEData.eepromDataSize = sizeof EEData;
       strncpy (EEData.SSID, DEFAULT_SSID, sizeof EEData.SSID);
@@ -89,6 +91,7 @@ void setup (void)
       EEChanged = 1;
    }
   
+   Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
       ConnectToNetwork ();
    #else
@@ -111,6 +114,9 @@ void SetupAP (void)
 {
    int rc;
    WiFi.mode (WIFI_AP);
+
+//   apIP = IPAddress(EEData.ipAddress);
+//   netMsk = IPAddress(EEData.netmask);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
    rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
@@ -225,7 +231,7 @@ void loop (void)
       noStats = WiFi.softAPgetStationNum();
       Serial.printf ("Connects: %d\n", noStats);
    }
-//   Serial.printf("Free Heap: %d Bytes\n", ESP.getFreeHeap());   
+//   Serial.printf("Free Heap: %d Bytes\n", ESP.getFreeHeap());
 
    #if defined (NOT_AP)
       if (connectRequired) 
@@ -274,7 +280,7 @@ void loop (void)
         WiFi.disconnect();
       }
    }
-  
+
    dnsServer.processNextRequest();
    server.handleClient ();  // checks for incoming messages
     

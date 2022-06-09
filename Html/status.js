@@ -43,8 +43,8 @@ var currentStatus;
 
    function displayStatus ()
    {
-      setElementInnerText ("requests", currentStatus.redirects);
-      setElementInnerText ("banned", currentStatus.banned);
+      setElementInnerText ("requests", currentStatus.totalRedirects);
+      setElementInnerText ("banned", currentStatus.totalBanned);
       setElementInnerText ("lastActivity", currentStatus.lastActivity);
 
       setElementInnerText ("iPhoneCount", currentStatus.iPhoneCount);

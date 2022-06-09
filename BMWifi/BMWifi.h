@@ -27,7 +27,7 @@ extern int EEChanged;
 extern const char *myHostname;
 
 extern struct eeprom_data_t  EEData;
-const int EEDataAddr = 40;
+const int EEDataAddr = 0;
 extern int displayRows;
 extern bool clockSet;
 
@@ -63,6 +63,8 @@ void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 void client_status (void);
 
 String getSystemInformation (void);
+
+bool isMasterDevice (void);
 
 void expireBanned (void);
 int banExpires (long long address);

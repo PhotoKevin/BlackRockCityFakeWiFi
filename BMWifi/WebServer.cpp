@@ -58,70 +58,6 @@ static void send (const char *type, const char *txt)
 //   server.stop ();
 }
 
-long long mac2ll (uint8 *mac)
-{
-   long long address = 0;
-
-   for (int i=0; i<6; i++)
-   {
-      address <<= 8;
-      address += mac[i];
-   }
-
-   return address;
-}
-
-long long ip2ll (IPAddress ip)
-{
-   long long address = 0;
-
-   for (int i=0; i<4; i++)
-   {
-      address <<= 8;
-      address += ip[i];
-   }
-
-   return address;   
-}
-
-long long clientAddress (void)
-{
-   long long address = 0;
-   WiFiClient cli = server.client ();
-   IPAddress clientIP = server.client().remoteIP();
-   
-   uint8_t client_count = wifi_softap_get_station_num();
-//   int i = 1;
-   struct station_info *station_list = wifi_softap_get_station_info();
-   while (station_list != NULL) 
-   {
-      IPAddress station = IPAddress ((&station_list->ip)->addr);
-      if (clientIP == station)
-      {
-         address = mac2ll (station_list->bssid);
-         
-         String station_ip = station.toString();
-//         char station_mac[18] = {0};
-//         sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
-//         Serial.printf ("%d. IP: %s MAC: %s\n", 0, station_ip.c_str(), station_mac);
-         station_list = STAILQ_NEXT(station_list, next);
-      }   
-   }
-   wifi_softap_free_station_info();
-
-   if (address == 0)
-      address = ip2ll (clientIP);
-      
-   return address;
-}
-
-bool isMasterDevice (void)
-{
-//   Serial.printf ("%llx", clientAddress ());
-//   Serial.printf (" vs %llx\n", mac2ll (EEData.masterDevice));
-   return clientAddress () == mac2ll (EEData.masterDevice);
-   
-}
 
 
 static void handleBanned (void)      {send ("text/html", banned_html);}
@@ -253,8 +189,9 @@ void handleBlocked (void)
 
 void handlePortalCheck () 
 {
-   Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
-
+   // delay (10); // Without the delay, the printf will crash. I think it's because hostHeader is returning a garbage value.
+   // Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
+   Serial.println ("");
    if (isMasterDevice ())
    {
       sendHeaders ();
@@ -262,17 +199,19 @@ void handlePortalCheck ()
       server.sendHeader ("Location", String ("http://") + server.client().localIP().toString() + "/status", true);
       server.send (302, "text/html", "");
    }
+   else
+   {
+      Serial.println ("Request redirected to captive portal");
+      sendHeaders ();
 
-   Serial.println ("Request redirected to captive portal");
-   sendHeaders ();
-
-   server.sendHeader ("Location", String ("http://") + server.client().localIP().toString(), true);
-   String content = redirect_html;
-   content.replace ("login.example.com", server.client().localIP().toString());
-   // Serial.println ("send content");
-   // Serial.println (content);
-   server.send (302, "text/html", content);
-   Serial.println ("content sent");
+      server.sendHeader ("Location", String ("http://") + server.client().localIP().toString(), true);
+      String content = redirect_html;
+      content.replace ("login.example.com", server.client().localIP().toString());
+      // Serial.println ("send content");
+      // Serial.println (content);
+      server.send (302, "text/html", content);
+      Serial.println ("content sent");
+   }
 }
 
 static void notFound (void)          

@@ -15,20 +15,33 @@ String getSystemInformation (void)
    //DynamicJsonDocument jsonBuffer(1280);
  //  JsonObject root = jsonBuffer.as<JsonObject>();
 
-   const int capacity = JSON_OBJECT_SIZE(22);
+   const int capacity = JSON_OBJECT_SIZE(32);
    StaticJsonDocument<capacity> root;
 
    char buffer[32];
    time_t now;
    now = time (NULL);
+
+   root["eepromDataSize"] = EEData.eepromDataSize;
+   root["totalBanned"]     = EEData.totalBanned;
+   root["totalRedirects"]  = EEData.totalRedirects;
+
    strftime (buffer, sizeof buffer, "%FT%T", gmtime (&now));
+   root["lastActivity"]    = buffer;
+   root["androidCount"]    = EEData.androidCount;
+   root["iPhoneCount"]     = EEData.iPhoneCount;
+   root["SSID"]            = EEData.SSID;
+   root["hostname"]        = EEData.hostname;
+   root["username"]        = EEData.username;
+   root["password"]        = EEData.password;
 
+   snprintf (buffer, sizeof buffer, "%02x:%02x:%02x:%02x:%02x:%02x", EEData.masterDevice[0], EEData.masterDevice[1], EEData.masterDevice[2], EEData.masterDevice[3], EEData.masterDevice[4], EEData.masterDevice[5]);
+   root["masterDevice"]    = buffer;
 
-   root["banned"] = EEData.totalBanned;
-   root["redirects"] = EEData.totalRedirects;
-   root["lastActivity"] = buffer;
-   root["iPhoneCount"] = EEData.iPhoneCount;
-   root["androidCount"] = EEData.androidCount;
+   snprintf (buffer, sizeof buffer, "%d.%d.%d.%d", EEData.ipAddress[0], EEData.ipAddress[1], EEData.ipAddress[2], EEData.ipAddress[3]);
+   root["ipAddress"]       = buffer;
+   snprintf (buffer, sizeof buffer, "%d.%d.%d.%d", EEData.netmask[0], EEData.netmask[1], EEData.netmask[2], EEData.netmask[3]);
+   root["netmask"]         = buffer;
 
    root["sdkVersion"] = ESP.getSdkVersion();
    root["bootVersion"] = ESP.getBootVersion();
