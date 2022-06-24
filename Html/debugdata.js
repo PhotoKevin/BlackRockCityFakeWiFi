@@ -24,8 +24,9 @@ questionSet =
 
 currentStatus =
 {
-   "redirects" : 4,
-   "banned" : 1,
+   "legalShown" : 5,
+   "legalAccepted" : 3,
+   "totalBanned" : 1,
    "lastActivity" : "1980-01-01",
    "iPhoneCount" : 1,
    "androidCount" : 2,
@@ -39,6 +40,16 @@ currentStatus =
    "sketchFree" : 0,
    "flashSize" : 0,
    "flashSpeed" : 0,
-   "softApMac" : "a",
-   "softApIP" : "127"
+   "softApMac" : "",
+   "softApIP" : ""
+}
+
+currentSettings =
+{
+   "ssid" : "BRC Fake WiFi",
+   "username" : "admin",
+   "ipAddress" : "10.4.7.47",
+   "netmask" : "255.255.255.0",
+   "masterDevice" : "4A:2F:CF:B5:B6:58",
+   "currentDevice" : "00:00"
 }

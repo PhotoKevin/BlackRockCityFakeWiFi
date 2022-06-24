@@ -8,9 +8,9 @@
 #include <time.h>
 
 #include "BMWifi.h"
-using namespace experimental::crypto;
+//using namespace experimental::crypto;
 
-namespace TypeCast = experimental::TypeConversion;
+//namespace TypeCast = experimental::TypeConversion;
 
 #define MAXLOGINS 5
 
@@ -22,10 +22,10 @@ struct authenticated_t
    time_t expires;
 };
 struct  authenticated_t authenticated[MAXLOGINS];
-static void expireIPs (void);
+static void expireDevices (void);
 
 
-long long mac2DeviceID (uint8 *mac)
+static long long mac2DeviceID (uint8 *mac)
 {
    long long address = 0;
 
@@ -38,7 +38,7 @@ long long mac2DeviceID (uint8 *mac)
    return address;
 }
 
-long long ip2DeviceID (IPAddress ip)
+static long long ip2DeviceID (IPAddress ip)
 {
    long long address = 0;
 
@@ -67,19 +67,19 @@ static void initSecurity (void)
 bool isLoggedIn (long long device, const String cookie)
 {
    initSecurity ();
-   expireIPs ();
+   expireDevices ();
 
-   Serial.printf ("isLoggedIn \n");
-   Serial.println (cookie);
+   Serial.printf ("isLoggedIn? %llx '%s'", device, cookie.c_str ());
    for (int i=0; i<MAXLOGINS; i++)
    {
-      Serial.printf ("Check pos %d: ", i);
-      Serial.println (authenticated[i].cookie);
       if (authenticated[i].cookie != "")
       {
-         Serial.printf ("Cookie %s contains %s\n", cookie.c_str(), authenticated[i].cookie.c_str());
-         if (cookie.indexOf (authenticated[i].cookie) >= 0)
+//         Serial.printf ("Does cookie '%s' contain '%s'?\n", cookie.c_str(), authenticated[i].cookie.c_str());
+         if (cookie.indexOf (authenticated[i].cookie) >= 0 && device == authenticated[i].device)
+         {
+            Serial.println ("  --> Yes, logged in");
             return true;
+         }
       }
    }
 
@@ -90,8 +90,11 @@ bool isLoggedIn (long long device, const String cookie)
 bool Login (String user, String pw, long long device, String &token)
 {
    initSecurity ();
-   expireIPs ();
+   expireDevices ();
 
+   user.trim ();
+   pw.trim ();   
+   
    if (user.equalsIgnoreCase(EEData.username) && pw.equals (EEData.password))
    {
       Serial.printf ("User/Pw good\n");
@@ -100,22 +103,21 @@ bool Login (String user, String pw, long long device, String &token)
          if (authenticated[j].cookie == "")
          {
             Serial.printf ("Pos %d is open\n", j);
-            uint8_t cookie[experimental::crypto::SHA256::NATURAL_LENGTH*2+1];
-            SHA256::hash(&device, sizeof device, cookie);
-
+            char timestr[20];
+            snprintf (timestr, sizeof timestr, "%lld", time (NULL));
             authenticated[j].device = device;
 
-            authenticated[j].cookie = TypeCast::uint8ArrayToHexString (cookie, sizeof cookie);
+            authenticated[j].cookie = timestr;
             authenticated[j].expires = time (NULL) + 3*60;  // three minutes
             token = authenticated[j].cookie;
-            Serial.printf ("Check pos %d: ", j);
-            Serial.println (authenticated[j].cookie);
+            Serial.printf ("Logged in user %s cookie %s\n", user.c_str(), token.c_str ());
 
             return true;
          }
       }
    }
 
+   Serial.printf ("Rejected user %s\n", user.c_str());
    return false;
 }
 
@@ -132,14 +134,13 @@ static void expireDevices (void)
    }
 }
 
-
 long long clientAddress (void)
 {
    long long address = 0;
    WiFiClient cli = server.client ();
    IPAddress clientIP = server.client().remoteIP();
    
-   uint8_t client_count = wifi_softap_get_station_num();
+//   uint8_t client_count = wifi_softap_get_station_num();
 //   int i = 1;
    struct station_info *station_list = wifi_softap_get_station_info();
    while (station_list != NULL) 
@@ -150,9 +151,6 @@ long long clientAddress (void)
          address = mac2DeviceID (station_list->bssid);
          
          String station_ip = station.toString();
-//         char station_mac[18] = {0};
-//         sprintf(station_mac, "%02X:%02X:%02X:%02X:%02X:%02X", MAC2STR(station_list->bssid));         
-//         Serial.printf ("%d. IP: %s MAC: %s\n", 0, station_ip.c_str(), station_mac);
          station_list = STAILQ_NEXT(station_list, next);
       }   
    }
@@ -166,9 +164,6 @@ long long clientAddress (void)
 
 bool isMasterDevice (void)
 {
-//   Serial.printf ("%llx", clientAddress ());
-//   Serial.printf (" vs %llx\n", mac2ll (EEData.masterDevice));
    return clientAddress () == mac2DeviceID (EEData.masterDevice);
-   
 }
 

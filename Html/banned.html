@@ -10,10 +10,7 @@
          function myOnload ()
          {
             console.log("onload");
-            let title = getCookie ("title");
-            document.title = title;
-            setElementInnerText ("top", title);
-
+            setTitle ();
             getExpirationTime ();
          }
       </script>
@@ -21,9 +18,7 @@
    <body onload="myOnload()">
       <script src="banned.js"></script>
 
-      <div class="top centerHorizontal" id="top">
-         BRC Open WiFi
-      </div>
+      <div class="top centerHorizontal" id="top"></div>
       <div class="banned centerHorizontal" id="main">
          This device is currently BANNED for violation of the 
          Terms & Conditions which clearly listed "Dorking about on the internet" under

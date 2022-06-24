@@ -1,53 +1,122 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-   <!-- developer.mozilla.org/en-US/docs/Web/Guide/AJAX/Getting_Started -->
-   <head>
-      <meta charset="utf-8">
-      <title>BRC Open WiFi</title>
-      <link rel="stylesheet" href="brc.css">
-      <link rel="stylesheet" href="radio2.css">
-      <script src="bmwifi.js"></script>
-      <script src="status.js"></script>
-      <script src="debugdata.js"></script>
-      <script>
-         function myOnload ()
+<head>
+   <meta charset="utf-8">
+   <title>BRC Open WiFi</title>
+   <link rel="stylesheet" href="brc.css">
+   <link rel="stylesheet" href="radio2.css">
+   <script src="bmwifi.js"></script>
+   <script src="status.js"></script>
+   <script src="debugdata.js"></script>
+   <script>
+      function myOnload()
+      {
+         console.log("onload");
+         setTitle();
+         getStatus();
+      }
+
+      function doResetCounts()
+      {
+         let answer = confirm("Clear counts?");
+         if (answer == true)
          {
-            console.log("onload");
-            let title = getCookie ("title");
-            document.title = title;
-            setElementInnerText ("top", title);
+            if (window.location.protocol != "file:")
+            {
+               const url = 'getJson';
+               var formData = new FormData();
+               formData.append("request", "resetCounts");
+               let xhr2 = new XMLHttpRequest();
 
-            getStatus ();
+               xhr2.open('POST', url, true);
+               xhr2.send(formData);
+               getStatus();
+            }
          }
-      </script>
-   </head>
+      }
+   </script>
+</head>
 
-   <body onload="myOnload()">
-      <div class="top centerHorizontal" id="top">
-         BRC Open WiFi
-      </div>
-      <div class="main centerHorizontal" id="main">
-         <table>
-            <tr><td>Requests: </td><td id="requests"></td></tr>
-            <tr><td>Banned: </td><td id="banned"></td></tr>
-            <tr><td>Last Activity: </td><td id="lastActivity"></td></tr>
+<body onload="myOnload()">
+   <div class="top centerHorizontal" id="top"></div>
+   <div class="main centerHorizontal" id="main">
+      <table>
+         <tr>
+            <td>Viewed T&C: </td>
+            <td id="requests"></td>
+         </tr>
+         <tr>
+            <td>Accepted T&C:&nbsp;</td>
+            <td id="accepted"></td>
+         </tr>
+         <tr>
+            <td>Banned: </td>
+            <td id="banned"></td>
+         </tr>
+         <tr>
+            <td>Last Request: </td>
+            <td id="lastActivity"></td>
+         </tr>
 
-            <tr><td>Android: </td><td id="androidCount"></td></tr>
-            <tr><td>iPhone: </td><td id="iPhoneCount"></td></tr>
-            <tr><td>&nbsp;</td> </tr>
-            <tr><td>SDK Version: </td><td id="sdkVersion"></td></tr>
-            <tr><td>Boot Version: </td><td id="bootVersion"></td></tr>
-            <tr><td>Chip ID: </td><td id="chipID"></td></tr>
-            <tr><td>CPU Freq: </td><td id="cpuFreq"></td></tr>
-            <tr><td>Voltage: </td><td id="voltage"></td></tr>
-            <tr><td>Free Heap: </td><td id="memoryFree"></td></tr>
-            <tr><td>Sketch Size: </td><td id="sketchSize"></td></tr>
-            <tr><td>Sketch Free: </td><td id="sketchFree"></td></tr>
-            <tr><td>Flash Size: </td><td id="flashSize"></td></tr>
-            <tr><td>Soft AP Mac: </td><td id="softApMac"></td></tr>
-            <tr><td>Soft AP IP: </td><td id="softApIP"></td></tr>
-         </table>
-      </div>
+         <tr>
+            <td>Android: </td>
+            <td id="androidCount"></td>
+         </tr>
+         <tr>
+            <td>iPhone: </td>
+            <td id="iPhoneCount"></td>
+         </tr>
+         <tr>
+            <td>&nbsp;</td>
+         </tr>
+         <tr>
+            <td>SDK Version: </td>
+            <td id="sdkVersion"></td>
+         </tr>
+         <tr>
+            <td>Boot Version: </td>
+            <td id="bootVersion"></td>
+         </tr>
+         <tr>
+            <td>Chip ID: </td>
+            <td id="chipID"></td>
+         </tr>
+         <tr>
+            <td>CPU Freq: </td>
+            <td id="cpuFreq"></td>
+         </tr>
+         <tr>
+            <td>Voltage: </td>
+            <td id="voltage"></td>
+         </tr>
+         <tr>
+            <td>Free Heap: </td>
+            <td id="memoryFree"></td>
+         </tr>
+         <tr>
+            <td>Sketch Size: </td>
+            <td id="sketchSize"></td>
+         </tr>
+         <tr>
+            <td>Sketch Free: </td>
+            <td id="sketchFree"></td>
+         </tr>
+         <tr>
+            <td>Flash Size: </td>
+            <td id="flashSize"></td>
+         </tr>
+         <tr>
+            <td>Soft AP Mac: </td>
+            <td id="softApMac"></td>
+         </tr>
+         <tr>
+            <td>Soft AP IP: </td>
+            <td id="softApIP"></td>
+         </tr>
+      </table>
+   </div>
+   <button type="button" onClick="location.href='settings.html'" class="main">Settings</button>
+   <button type="button" onClick="doResetCounts ()" class="main">Reset Counts</button>
+</body>
 
-   </body>
 </html>

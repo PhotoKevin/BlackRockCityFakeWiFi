@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+   <title>Work Clock</title>
+
+   <meta charset="utf-8">
+   <link rel="stylesheet" href="brc.css">
+   <link rel="stylesheet" href="radio2.css">
+   <script src="bmwifi.js"></script>
+   <script src="settings.js"></script>
+   <script src="debugdata.js"></script>
+   <script>
+      function myOnload()
+      {
+         console.log("onload");
+         setTitle();
+      }
+   </script>
+</head>
+
+<body onload="myOnload()">
+   <div class="top centerHorizontal" id="top"></div>
+   <div class="main centerHorizontal" id="main">
+
+      <form action="login.html" method="post">
+         <table>
+            <tr>
+               <td><label for="username">Username:</label></td>
+               <td><input name="username" id="username" /></td>
+            </tr>
+            <tr>
+               <td><label for="password">Password:</label></td>
+               <td><input type="password" name="password" id="password" /></td>
+            </tr>
+            <tr>
+               <td style="text">
+               <input type="submit" value="Submit" class="main" onclick="getElementById('submitTimeStamp').value = new Date ().toISOString()" ></td>
+               <input type="hidden" id="submitTimeStamp" name="timeStamp" value="3487">
+            </tr>
+         </table>
+      </form>
+   </div>
+</body

@@ -1,11 +1,10 @@
-
+//#define USE_LCD_DISPLAY
+//#define NOT_AP    // Define for debugging as just a device on the network
 
 #if !defined (ESP8266)
 #error Change your board type to generic ESP8266
 // https://github.com/esp8266/Arduino#installing-with-boards-manager
 #endif
-
-//#define NOT_AP    // Define for debugging as just a device on the network
 
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
@@ -16,6 +15,7 @@
 
 #include "Config.h"
 
+#if defined (USE_LCD_DISPLAY)
 // https://github.com/olikraus/u8g2
 #include <U8x8lib.h>
 
@@ -24,16 +24,18 @@
 #endif
 
 U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+#endif
 
 //https://android.googlesource.com/platform/frameworks/base/+/c80f952/core/java/android/net/CaptivePortalTracker.java
 #include "BMWifi.h"
 
 // You need to supply your own Secret.h defining 
-//#define SSID "<SSID>"      
-//#define PASS "<password>"  
+//#define NETWORK_SSID "<SSID>"      
+//#define NETWORK_PASS "<password>"  
+#if defined (NOT_AP)
 #include "Secret.h"
+#endif
 
-//const char *myHostname = HOST_NAME;
 bool clockSet = false;
 
 IPAddress apIP(10,47,4,7);
@@ -58,10 +60,12 @@ void setup (void)
 {
    Serial.begin (115200);                           // full speed to monitor
 
+#if defined (USE_LCD_DISPLAY)
    u8x8.begin();
    u8x8.setPowerSave(0);
  
    u8x8.setFont (u8x8_font_chroma48medium8_r);
+#endif
    Serial.print ("\nBMWifi Starting\n");
 
    EEPROM.begin (sizeof EEData); 
@@ -90,7 +94,7 @@ void setup (void)
 
       EEChanged = 1;
    }
-  
+
    Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
       ConnectToNetwork ();
@@ -104,7 +108,6 @@ void setup (void)
    if (EEData.totalBanned < 0)
       memset (&EEData, 0, sizeof EEData);
 
-   DisplayStatus ();
    yield ();
 }
 
@@ -146,7 +149,7 @@ void ConnectToNetwork (void)
    
    Serial.print ("Connecting");
    WiFi.disconnect ();
-   wl_status_t ws = WiFi.begin (SSID, PASS); // Connect to WiFi network
+   wl_status_t ws = WiFi.begin (NETWORK_SSID, NETWORK_PASS); // Connect to WiFi network
    Serial.printf ("\nWiFi.Begin: %d\n", ws);
 
    // Wait until we connect, and do some status messages
@@ -157,11 +160,14 @@ void ConnectToNetwork (void)
       Serial.print (stat);
       delay (1000);
    }
+
+   Serial.print ("localIP: ");
+   Serial.println (WiFi.localIP());
 }
 #endif
 
 boolean connectRequired;
-long lastConnectTry = 0;
+unsigned long lastConnectTry = 0;
 int laststatus = WL_IDLE_STATUS;
 
 
@@ -170,7 +176,7 @@ int laststatus = WL_IDLE_STATUS;
 static void pad (char *str, size_t strsize)
 {
    char *p = str + strlen (str);
-   while (p - str < strsize-1)
+   while ((size_t) (p - str) < strsize-1)
    {
       *p++ = ' ';
       *p = '\0';
@@ -191,37 +197,47 @@ void DisplayOLEDStatus (void)
    static int prevBanned = -1;
 
    // Work out if we need to refresh the display. Do it as a batch so the serial output is all or nothing
-   if (prevRedirects != EEData.totalRedirects || prevBanned != EEData.totalBanned || prevActivity != EEData.lastActivity)
+   if (prevRedirects != EEData.legalShown || prevBanned != EEData.totalBanned || prevActivity != EEData.lastActivity)
    {
-      prevRedirects = EEData.totalRedirects;
+      prevRedirects = EEData.legalShown;
       prevBanned = EEData.totalBanned;
       prevActivity = EEData.lastActivity;
 
       char buffer[17];
+#if defined (USE_LCD_DISPLAY)
       u8x8.drawString (0, 0, EEData.hostname);
-
-      snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.totalRedirects, EEData.totalBanned);
+#endif
+      snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
       pad (buffer, sizeof buffer);
       Serial.println (buffer);
+#if defined (USE_LCD_DISPLAY)
       u8x8.drawString (0, 1, buffer);
+#endif
 
       snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
       pad (buffer, sizeof buffer);
       Serial.println (buffer);
+#if defined (USE_LCD_DISPLAY)
       u8x8.drawString (0, 2, buffer);
+#endif
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       pad (buffer, sizeof buffer);
       Serial.println (buffer);
+#if defined (USE_LCD_DISPLAY)
       u8x8.drawString (0, 3, buffer);
+#endif
    }
 
+#if defined (USE_LCD_DISPLAY)
    u8x8.refreshDisplay();    // only required for SSD1606/7  
+#endif
 }
 
 
 void loop (void)
 {
+   static unsigned long prevHeap = 4000000;
    DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
 
@@ -231,9 +247,17 @@ void loop (void)
       noStats = WiFi.softAPgetStationNum();
       Serial.printf ("Connects: %d\n", noStats);
    }
-//   Serial.printf("Free Heap: %d Bytes\n", ESP.getFreeHeap());
+
+   unsigned long heap = ESP.getFreeHeap ();
+   if (heap < prevHeap)
+   {
+      Serial.printf("Free Heap: %lu Bytes\n", heap);
+      prevHeap = heap;
+   }
 
    #if defined (NOT_AP)
+//      MDNS.update ();
+      MDNS.announce ();
       if (connectRequired) 
       {
          Serial.println ( "Connect requested" );
@@ -242,7 +266,6 @@ void loop (void)
          lastConnectTry = millis();
       }
    #endif
-   
 
    int currentStatus = WiFi.status();
    if ((currentStatus == 0) && (millis() > (lastConnectTry + 60000))) 
@@ -266,13 +289,13 @@ void loop (void)
          Serial.println (WiFi.localIP());
       
          // Setup MDNS responder
-         if (!MDNS.begin(EEData.hostname)) 
+         if (!MDNS.begin(EEData.hostname, WiFi.localIP())) 
             Serial.println("Error setting up MDNS responder!");
          else 
          {
-            Serial.println("mDNS responder started");
+            Serial.printf ("mDNS responder started: %s\n", EEData.hostname);
             // Add service to MDNS-SD
-            MDNS.addService("http", "tcp", 80);
+            MDNS.addService ("http", "tcp", 80);
          }
       }
       else if (currentStatus == WL_NO_SSID_AVAIL) 
@@ -306,7 +329,7 @@ String  WiFiStatus (int s)
    }
 }
 
-void DisplayStatus (void)
+void xDisplayStatus (void)
 {
    #if defined (NOT_AP)
       Serial.print ("localIP: ");
@@ -318,7 +341,7 @@ void DisplayStatus (void)
 }
 
 
-void client_status() 
+void displayClients () 
 {
    unsigned char number_client;
    struct station_info *stat_info;

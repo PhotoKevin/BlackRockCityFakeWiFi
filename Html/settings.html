@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+   <title>BRC Settings</title>
+
+   <meta charset="utf-8">
+   <link rel="stylesheet" href="brc.css">
+   <link rel="stylesheet" href="radio2.css">
+   <script src="bmwifi.js"></script>
+   <script src="settings.js"></script>
+   <script src="debugdata.js"></script>
+   <script>
+      function myOnload()
+      {
+         console.log("onload");
+         setTitle ();
+         getSettings();
+      }
+   </script>
+</head>
+
+
+
+<body onload="myOnload()">
+   <div class="top centerHorizontal" id="top"></div>
+   <div class="main centerHorizontal" id="main">
+      <form action="settings.html" method="post">
+         <table>
+            <tr>
+               <td><label for="ssid">SSID:</label></td>
+               <td><input name="ssid" id="ssid"></td>
+            </tr>
+            <tr>
+               <td> <label for="username">Username:</label> </td>
+               <td> <input name="username" id="username" /> </td>
+            <tr>
+               <td><label for="password">Password:</label></td>
+               <td><input id="password" name="password" /> </td>
+            </tr>
+            </tr>
+            <tr>
+               <td><label for="ipAddress">IP:</label> </td>
+               <td> <input name="ipAddress" id="ipAddress" required pattern="^((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])$"> </td>
+            <tr>
+               <td><label for="netmask">Netmask:</label> </td>
+               <td> <input name="netmask" id="netmask" required pattern="^((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])$"></td>
+            </tr>
+            <tr>
+               <td><label for="masterDevice"> Master Device:</label> </td>
+               <td> <input name="masterDevice" id="masterDevice" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"> </td>
+            </tr>
+            <tr>
+               <td> Current Device:&nbsp;</td>
+               <td> <input id="currentDevice" disabled> </td>
+            </tr>
+            <tr>
+               <td style="text"><input type="submit" value="Submit"  class="main"></td>
+            </tr>
+         </table>
+      </form>
+      <button type="button" onClick="location.href='status.html'"  class="main">Status Page</button>
+   </div>
+</body

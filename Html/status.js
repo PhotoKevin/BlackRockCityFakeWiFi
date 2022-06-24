@@ -20,8 +20,6 @@ var currentStatus;
       }
    }
 
-
-
    function getStatus ()
    {
       if (window.location.protocol == "file:")
@@ -33,6 +31,7 @@ var currentStatus;
          const url = 'getJson';
          var formData = new FormData();
          formData.append ("request", "status");
+         formData.append ("timeStamp", new Date ().toISOString());
 
          xhr.open ('POST', url, true);
          xhr.onreadystatechange = ajaxHandler;
@@ -40,10 +39,10 @@ var currentStatus;
       }
    }
 
-
    function displayStatus ()
    {
-      setElementInnerText ("requests", currentStatus.totalRedirects);
+      setElementInnerText ("requests", currentStatus.legalShown);
+      setElementInnerText ("accepted", currentStatus.legalAccepted);
       setElementInnerText ("banned", currentStatus.totalBanned);
       setElementInnerText ("lastActivity", currentStatus.lastActivity);
 

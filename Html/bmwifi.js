@@ -5,18 +5,34 @@ function setElementInnerText(elementID, innerText)
       id.innerText = innerText;
 }
 
+function setElementValue (elementID, value)
+{
+   let id = document.getElementById (elementID);
+   if (id != null)
+      id.value = value;
+}
 
-function getCookie(cName)
+
+function getCookie (cName)
 {
    const name = cName + "=";
    console.log (document.cookie);
-   const cDecoded = decodeURIComponent(document.cookie);
+   const cDecoded = decodeURIComponent (document.cookie);
    console.log (cDecoded);
    const cArr = cDecoded.split('; ');
    let res;
-   cArr.forEach(val =>
+   cArr.forEach (val =>
    {
-      if (val.indexOf(name) === 0) res = val.substring(name.length);
+      if (val.indexOf(name) === 0) res = val.substring (name.length);
    })
    return res
+}
+
+function setTitle ()
+{
+   let title = getCookie ("title");
+   if (title == null)
+      title = "BRC Fake WiFi";
+   document.title = title;
+   setElementInnerText ("top", title);
 }
