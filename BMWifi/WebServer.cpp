@@ -93,10 +93,11 @@ static void sendHeaders (void)
 static void sendHtml (const char *txt)
 {
    IPAddress clientIP = server.client().remoteIP();
-   Serial.printf ("Send %s -> %s\n", server.uri ().c_str(), clientIP.toString ().c_str ());
+   bool allowed = allowSend (server.uri ());
+   Serial.printf ("Send %s%s -> %s (%s)\n", server.hostHeader ().c_str (), server.uri ().c_str(), clientIP.toString ().c_str (), allowed ? "allowed" : "not allowed");
    sendHeaders ();
    
-   if (allowSend (server.uri ()))
+   if (allowed)
       server.send (200, "text/html", txt);
    else
       server.send (200, "text/html", banned_html);
@@ -106,7 +107,7 @@ static void sendHtml (const char *txt)
 
 static void sendJs (const char *txt)
 {
-   Serial.printf ("Send %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
+   Serial.printf ("SendJs %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
    sendHeaders ();
    
    server.send (200, "application/javascript", txt);
@@ -116,7 +117,7 @@ static void sendJs (const char *txt)
 
 static void sendCss (const char *txt)
 {
-   Serial.printf ("Send %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
+   Serial.printf ("SendCss %s%s\n", server.hostHeader ().c_str (), server.uri ().c_str());
    sendHeaders ();
    
    server.send (200, "text/css", txt);
@@ -351,9 +352,9 @@ void handleBlocked (void)
 
 void handlePortalCheck () 
 {
-   // delay (10); // Without the delay, the printf will crash. I think it's because hostHeader is returning a garbage value.
-   // Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
    Serial.println ("");
+   // delay (10); // Without the delay, the printf will crash. I think it's because hostHeader is returning a garbage value.
+   Serial.printf ("handlePortalCheck: %s%s\n", server.hostHeader ().c_str(), server.uri ().c_str());
    if (isMasterDevice ())
    {
       sendHeaders ();
@@ -366,13 +367,11 @@ void handlePortalCheck ()
       Serial.println ("Request redirected to captive portal");
       sendHeaders ();
 
-      server.sendHeader ("Location", String ("http://") + server.client().localIP().toString(), true);
+      server.sendHeader ("Location", String ("http://") + server.client().localIP().toString() + "/legal.html", true);
       String content = redirect_html;
       content.replace ("login.example.com", server.client().localIP().toString());
-      // Serial.println ("send content");
-      // Serial.println (content);
+content = "";
       server.send (302, "text/html", content);
-      //Serial.println ("content sent");
    }
 }
 
@@ -426,10 +425,10 @@ void setupWebServer (void)
    server.on ("/login.html", HTTP_POST, handleLogin);
 
 
-   server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
-   server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 
-   server.on("/connecttest.txt", handlePortalCheck);  // Windows 10 captive portal check.
-   server.on("/redirect", handlePortalCheck);  // Windows 10 captive portal check.
+   // server.on("/generate_204", handlePortalCheck);  //Android captive portal check.
+   // server.on("/fwlink", handlePortalCheck);  //Microsoft captive portal check. 
+   // server.on("/connecttest.txt", handlePortalCheck);  // Windows 10 captive portal check.
+   // server.on("/redirect", handlePortalCheck);  // Windows 10 captive portal check.
 
    server.collectHeaders ("Request-Time", "User-Agent", "Cookie", "");
 
