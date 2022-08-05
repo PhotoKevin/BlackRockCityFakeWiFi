@@ -20,10 +20,12 @@
    function getExpirationTime ()
    {
       const url = 'getJson';
-      var formData = new FormData();
+//      var formData = new FormData();
+      var formData = new URLSearchParams ();
       formData.append ("request", "expire");
 
       xhr.open ('POST', url, true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.onreadystatechange = expirationHandler;
       xhr.send (formData);
    }

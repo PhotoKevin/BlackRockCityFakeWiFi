@@ -25,6 +25,7 @@ struct eeprom_data_t
    uint8_t playSound;
 };
 
+extern char lastPageReq[512];
 extern int EEChanged;
 
 extern const char *myHostname;
@@ -54,10 +55,25 @@ extern const char settings_html[];
 extern const char settings_js[];
 extern const char login_html[];
 
-#if defined (ESP8266WEBSERVER_H)
-  extern ESP8266WebServer server;
+
+extern unsigned char GTCertificate_DER[];
+extern unsigned char GTCertificateP_DER[];
+extern unsigned int GTCertificate_DER_len;
+extern unsigned int GTCertificateP_DER_len;
+
+extern const char *cert_pem;
+extern const char *key_pem;
+
+#if defined (_ESP_HTTPS_SERVER_H_)
+   extern httpd_handle_t secure_http;
+   extern httpd_handle_t insecure_http;
+   long long clientAddress (httpd_req_t *req);
+//   bool isMasterDevice (httpd_req_t *req);
+   bool isLoggedIn (httpd_req_t *req);
+   String getSettings (httpd_req_t *req);
 #endif
 
+String  WiFiStatus (int s);
 void DisplayStatus (void);
 void DisplayOLEDStatus (void);
 
@@ -69,11 +85,12 @@ void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 
 void client_status (void);
 
-String getSystemInformation (void);
-String getSettings (void);
+void dump (void *pkt, size_t len);
 
-bool isMasterDevice (void);
-bool isLoggedIn (long long device, const String cookie);
+String getSystemInformation (void);
+
+
+
 bool Login (String user, String pw, long long device, String &token);
 
 void expireBanned (void);
@@ -82,4 +99,4 @@ void banDevice (long long address);
 int isBanned (long long address);
 void handleBlocked (void) ;
 
-long long clientAddress (void);
+

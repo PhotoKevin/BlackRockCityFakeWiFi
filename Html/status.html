@@ -24,11 +24,13 @@
             if (window.location.protocol != "file:")
             {
                const url = 'getJson';
-               var formData = new FormData();
+               //var formData = new FormData();
+               var formData = new URLSearchParams ();
                formData.append("request", "resetCounts");
                let xhr2 = new XMLHttpRequest();
 
                xhr2.open('POST', url, true);
+               xhr2.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
                xhr2.send(formData);
                getStatus();
             }

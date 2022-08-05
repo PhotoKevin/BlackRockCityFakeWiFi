@@ -29,13 +29,16 @@ var currentStatus;
       else
       {
          const url = 'getJson';
-         var formData = new FormData();
+
+         //var formData = new FormData();
+         var formData = new URLSearchParams ();
          formData.append ("request", "status");
          formData.append ("timeStamp", new Date ().toISOString());
 
          xhr.open ('POST', url, true);
+         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
          xhr.onreadystatechange = ajaxHandler;
-         xhr.send (formData);
+         xhr.send (formData.toString ());
       }
    }
 

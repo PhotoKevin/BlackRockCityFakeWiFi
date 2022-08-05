@@ -1,8 +1,14 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <time.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
+
+#if defined (ESP32)
+   #include "WiFi.h"
+   #include <esp_https_server.h>
+#else
+   #error Change your board type to an ESP32
+#endif
+
 
 // Note: https://github.com/esp8266/Arduino/commit/9e82bf7c8db6274afa297262e1e16e685b1d56f9
 
@@ -11,9 +17,6 @@
 String getSystemInformation (void)
 {
    String json = "";
-   StaticJsonDocument<1024> jsonBuffer;
-   //DynamicJsonDocument jsonBuffer(1280);
- //  JsonObject root = jsonBuffer.as<JsonObject>();
 
    const int capacity = JSON_OBJECT_SIZE(32);
    StaticJsonDocument<capacity> root;
@@ -33,8 +36,6 @@ String getSystemInformation (void)
    root["iPhoneCount"]     = EEData.iPhoneCount;
    root["SSID"]            = EEData.SSID;
    root["hostname"]        = EEData.hostname;
-//   root["username"]        = EEData.username;
-//   root["password"]        = EEData.password;
 
    snprintf (buffer, sizeof buffer, "%02x:%02x:%02x:%02x:%02x:%02x", EEData.masterDevice[0], EEData.masterDevice[1], EEData.masterDevice[2], EEData.masterDevice[3], EEData.masterDevice[4], EEData.masterDevice[5]);
    root["masterDevice"]    = buffer;
@@ -45,18 +46,18 @@ String getSystemInformation (void)
    root["netmask"]         = buffer;
 
    root["sdkVersion"] = ESP.getSdkVersion();
-   root["bootVersion"] = ESP.getBootVersion();
-   root["bootMode"] = ESP.getBootMode();
-   root["chipID"] = ESP.getChipId();
+//   root["bootVersion"] = ESP.getBootVersion();
+//   root["bootMode"] = ESP.getBootMode();
+   root["chipID"] = ESP.getChipModel();
    root["cpuFreq"] = ESP.getCpuFreqMHz();
-      
-   root["voltage"] = ESP.getVcc();
+
+//   root["voltage"] = ESP.getVcc();
    
    root["memoryFree"] = ESP.getFreeHeap();
    root["sketchSize"] = ESP.getSketchSize();
    root["sketchFree"] = ESP.getFreeSketchSpace();
    
-   root["flashRealSize"] = ESP.getFlashChipRealSize();
+//   root["flashRealSize"] = ESP.getFlashChipRealSize();
    root["flashSize"] = ESP.getFlashChipSize();
 //   root["flashSpeed"] = ( ESP.getFlashChipSpeed() / 1000000 );
    
@@ -71,12 +72,9 @@ String getSystemInformation (void)
 }
 
 
-String getSettings (void)
+String getSettings (httpd_req_t *req)
 {
    String json = "";
-   StaticJsonDocument<1024> jsonBuffer;
-   //DynamicJsonDocument jsonBuffer(1280);
- //  JsonObject root = jsonBuffer.as<JsonObject>();
 
    const int capacity = JSON_OBJECT_SIZE(32);
    StaticJsonDocument<capacity> root;
@@ -96,7 +94,7 @@ String getSettings (void)
    snprintf (buffer, sizeof buffer, "%d.%d.%d.%d", EEData.netmask[0], EEData.netmask[1], EEData.netmask[2], EEData.netmask[3]);
    root["netmask"]         = buffer;
 
-   long long currentDeviceMac = clientAddress ();
+   long long currentDeviceMac = clientAddress (req);
    uint8_t *bytes = (uint8_t *) &currentDeviceMac;
    snprintf (buffer, sizeof buffer, "%02x:%02x:%02x:%02x:%02x:%02x", bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]);
    root["currentDevice"] = buffer;

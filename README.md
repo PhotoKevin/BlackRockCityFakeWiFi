@@ -7,16 +7,13 @@ Finally they get told that "Dorking around on the Internet" is against the princ
 
 
 ## Development Environment
-I developed this on both a Heltec WiFi Kit 8 and Wemos D1 mini using the Arduino IDE, but it should work on any generic ESP-8266 board that is supported by Arduino. The Heltec board is nice in that it has a built in display and can run
-off of either USB or a LiPo battery and can charge the battery from USB. Apparently Heltec doesn't  make
-it anymore but clones can be purchased from eBay or AliExpress.
+I developed this on both a Heltec WiFi Kit 32 and some generic ESP32 Devkit using the Arduino IDE, but it should work on any generic ESP-32 board that is supported by Arduino. The Heltec board is nice in that it has a built in display and can run
+off of either USB or a LiPo battery and can charge the battery from USB. 
 
 The web pages were created with the [Atom](https://atom.io) editor. A small C program is then used to convert the
 pages into data stored in the main flash memory. The C program was developed in Visual Studio 2019.
 
-[Wemos D1 mini v3.0](http://www.wemos.cc)
-
-[WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)
+[WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)
 
 
 ## Captive Portal
@@ -29,19 +26,20 @@ implement this.
 ## Building the project
 I'm using the Arduino 2.0 IDE. It's still in beta (2022-06) but has been working well.
 
-- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URL of https://arduino.esp8266.com/stable/package_esp8266com_index.json
+- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URL of 
+https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
 
 - Exit and restart the IDE.
 
-- In the Boards Manager (left column, second icon from the top) find "esp8266 by ESP8266 Community" and install it.
+- In the Boards Manager (left column, second icon from the top) find "esp32 by Espressif Systems" and install it. You need at least version 2.04
 
 - Now go to the Library Manager (left column, third icon from the top) and install "ArduionJson by Benoit Blanchon".
-If you are using the WiFi Kit 8 board with an LCD display, you will also want to install "U8g2 by oliver"
+If you are using the WiFi Kit 32 board with an LCD display, you will also want to install "U8g2 by oliver"
 
 - Plug your ESP board into a USB port.
 
-- Click on the drop down in the button bar. Find "Generic ESP8266 Module" and click it. Also select the COM port for the board.
+- Click on the drop down in the button bar. Find "Generic ESP32 Dev Module" and click it. Also select the COM port for the board.
 
 - Lastly click on the Upload (right arrow) button to compile and install the software.
 

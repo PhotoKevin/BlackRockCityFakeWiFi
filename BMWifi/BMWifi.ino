@@ -1,17 +1,22 @@
 //#define USE_LCD_DISPLAY
 //#define NOT_AP    // Define for debugging as just a device on the network
 
-#if !defined (ESP8266)
-#error Change your board type to generic ESP8266
-// https://github.com/esp8266/Arduino#installing-with-boards-manager
-#endif
 
-#include <ESP8266WebServer.h>
 #include <DNSServer.h>
-#include <ESP8266mDNS.h>
 #include <Wire.h>
 #include <EEPROM.h>
 #include <Ticker.h>
+
+#if defined (ESP32)
+   #include <WiFi.h>
+   #include <ESPmDNS.h>
+   #include <esp_https_server.h>
+
+#else
+   #error Change your board type to an ESP32
+#endif
+
+char lastPageReq[512];
 
 #include "Config.h"
 
@@ -19,11 +24,19 @@
 // https://github.com/olikraus/u8g2
 #include <U8x8lib.h>
 
-#ifdef u8g2_HAVE_HW_SPIx
-#include <SPI.h>
-#endif
+// #define u8g2_HAVE_HW_SPI
+// #ifdef u8g2_HAVE_HW_SPI
+// #include <SPI.h>
+// #endif
 
-U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+// Heltec WiFi Kit 8
+//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+
+
+// Heltec WiFi Kit 32
+U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+//U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ 16);
+
 #endif
 
 //https://android.googlesource.com/platform/frameworks/base/+/c80f952/core/java/android/net/CaptivePortalTracker.java
@@ -32,16 +45,21 @@ U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 // You need to supply your own Secret.h defining 
 //#define NETWORK_SSID "<SSID>"      
 //#define NETWORK_PASS "<password>"  
-#if defined (NOT_AP)
+//#if defined (NOT_AP)
 #include "Secret.h"
-#endif
+//#endif
 
 bool clockSet = false;
 
 IPAddress apIP(10,47,4,7);
 IPAddress netMsk(255,255,255,0);
 
-ESP8266WebServer server (80);                         // HTTP server will listen at port 80
+
+#if defined (ESP32)
+   httpd_handle_t secure_http = NULL;
+   httpd_handle_t insecure_http = NULL;
+#endif
+
 const byte DNS_PORT = 53;
 
 DNSServer dnsServer;
@@ -54,11 +72,17 @@ void  ConnectToNetwork (void);
 #endif
 void  SetupAP (void);
 
-ADC_MODE(ADC_VCC);      // Needed to make the ESP.getVCC function work.
+//ADC_MODE(ADC_VCC);      // Needed to make the ESP.getVCC function work.
 
+//#include "heltec.h"
 void setup (void)
 {
    Serial.begin (115200);                           // full speed to monitor
+   
+   // Initialize the Heltec ESP32 object
+//   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
+//	Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/);
+
 
 #if defined (USE_LCD_DISPLAY)
    u8x8.begin();
@@ -69,7 +93,6 @@ void setup (void)
    Serial.print ("\nBMWifi Starting\n");
 
    EEPROM.begin (sizeof EEData); 
-   Serial.printf ("EEData is %d bytes\n", sizeof EEData);   
    ReadEEData (EEDataAddr, &EEData, sizeof EEData);
    if (EEData.eepromDataSize != sizeof EEData)
    {
@@ -91,9 +114,9 @@ void setup (void)
 
       for (int i=0; i<6; i++)
          EEData.masterDevice[i] = master[i];
-
       EEChanged = 1;
    }
+strncpy (EEData.hostname, "www.gt.org", sizeof EEData.hostname);
 
    Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
@@ -102,16 +125,25 @@ void setup (void)
       SetupAP ();
    #endif
 
-   setupWebServer ();
-   yield ();
+   // Setup MDNS responder
+   Serial.println (EEData.hostname);
+   if (!MDNS.begin (EEData.hostname)) 
+      Serial.println("Error setting up MDNS responder!");
+   else 
+   {
+      Serial.printf ("mDNS responder started: %s\n", EEData.hostname);
+      // Add service to MDNS-SD
+      MDNS.addService ("http", "tcp", 80);
+      MDNS.addService ("https", "tcp", 443);
+   }
 
-   if (EEData.totalBanned < 0)
-      memset (&EEData, 0, sizeof EEData);
+
+   setupWebServer ();
 
    yield ();
 }
 
-/// Setup the ESP8266 as an Access Point
+/// Setup the ESP32 as an Access Point
 
 void SetupAP (void)
 {
@@ -124,13 +156,13 @@ void SetupAP (void)
    WiFi.softAPConfig (apIP, apIP, netMsk);
    rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
 
-   Serial.printf ("softAP : %d\n", rc);
-
    Serial.print ("AP is ");
    Serial.println (WiFi.softAPIP ().toString());
 
    // Set up a DNS server. 
    dnsServer.setErrorReplyCode (DNSReplyCode::NoError);
+
+   dnsServer.setTTL(0);
    dnsServer.start (DNS_PORT, "*", WiFi.softAPIP ());
 }
 
@@ -149,6 +181,8 @@ void ConnectToNetwork (void)
    
    Serial.print ("Connecting");
    WiFi.disconnect ();
+   WiFi.mode (WIFI_STA);
+
    wl_status_t ws = WiFi.begin (NETWORK_SSID, NETWORK_PASS); // Connect to WiFi network
    Serial.printf ("\nWiFi.Begin: %d\n", ws);
 
@@ -170,7 +204,7 @@ boolean connectRequired;
 unsigned long lastConnectTry = 0;
 int laststatus = WL_IDLE_STATUS;
 
-
+#if defined (USE_LCD_DISPLAY)
 // Pad a string with blanks.
 // This is used to clear to end-of-line on the OLE display
 static void pad (char *str, size_t strsize)
@@ -182,6 +216,7 @@ static void pad (char *str, size_t strsize)
       *p = '\0';
    }
 }
+#endif
 
 // The OLED is 4 rows of 16 characters.
 // 0123456789012345
@@ -190,6 +225,7 @@ static void pad (char *str, size_t strsize)
 // Batt xxxx
 // 22-01-01 12:00
 
+char prevLastPageReq[512];
 void DisplayOLEDStatus (void)
 {
    static time_t prevActivity = 0;
@@ -208,25 +244,34 @@ void DisplayOLEDStatus (void)
       u8x8.drawString (0, 0, EEData.hostname);
 #endif
       snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
-      pad (buffer, sizeof buffer);
       Serial.println (buffer);
 #if defined (USE_LCD_DISPLAY)
+      pad (buffer, sizeof buffer);
       u8x8.drawString (0, 1, buffer);
 #endif
 
+#if defined (ESP8266)
       snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
-      pad (buffer, sizeof buffer);
       Serial.println (buffer);
 #if defined (USE_LCD_DISPLAY)
+      pad (buffer, sizeof buffer);
       u8x8.drawString (0, 2, buffer);
+#endif
 #endif
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
-      pad (buffer, sizeof buffer);
       Serial.println (buffer);
 #if defined (USE_LCD_DISPLAY)
+      pad (buffer, sizeof buffer);
       u8x8.drawString (0, 3, buffer);
 #endif
+   }
+
+   if (strncmp (lastPageReq, prevLastPageReq, sizeof prevLastPageReq) != 0)
+   {
+      strncpy (prevLastPageReq, lastPageReq, sizeof prevLastPageReq);
+      Serial.print ("lastPageReq: ");
+      Serial.println (lastPageReq);
    }
 
 #if defined (USE_LCD_DISPLAY)
@@ -245,19 +290,17 @@ void loop (void)
    if (noStats != WiFi.softAPgetStationNum())
    {
       noStats = WiFi.softAPgetStationNum();
-      Serial.printf ("Connects: %d\n", noStats);
+      Serial.printf ("Connected devices: %d\n", noStats);
    }
 
    unsigned long heap = ESP.getFreeHeap ();
    if (heap < prevHeap)
    {
-      Serial.printf("Free Heap: %lu Bytes\n", heap);
+ //     Serial.printf("Free Heap: %lu Bytes\n", heap);
       prevHeap = heap;
    }
 
    #if defined (NOT_AP)
-//      MDNS.update ();
-      MDNS.announce ();
       if (connectRequired) 
       {
          Serial.println ( "Connect requested" );
@@ -274,7 +317,8 @@ void loop (void)
       /* Don't set retry time too low as retry interfere the softAP operation */
       connectRequired = true;
    }
-   
+
+  
    if (laststatus != currentStatus) 
    {
       // WLAN status change
@@ -288,15 +332,6 @@ void loop (void)
          Serial.print ("IP address: ");
          Serial.println (WiFi.localIP());
       
-         // Setup MDNS responder
-         if (!MDNS.begin(EEData.hostname, WiFi.localIP())) 
-            Serial.println("Error setting up MDNS responder!");
-         else 
-         {
-            Serial.printf ("mDNS responder started: %s\n", EEData.hostname);
-            // Add service to MDNS-SD
-            MDNS.addService ("http", "tcp", 80);
-         }
       }
       else if (currentStatus == WL_NO_SSID_AVAIL) 
       {
@@ -305,8 +340,6 @@ void loop (void)
    }
 
    dnsServer.processNextRequest();
-   server.handleClient ();  // checks for incoming messages
-    
    yield ();
 }
 
@@ -323,63 +356,12 @@ String  WiFiStatus (int s)
    case WL_CONNECTED: return "Connected";               // 3
    case WL_CONNECT_FAILED: return "Connect Failed";     // 4
    case WL_CONNECTION_LOST: return "Connection Lost";   // 5
-   case WL_WRONG_PASSWORD: return "Wrong Password";     // 6
+   #if defined (ESP8266)
+      case WL_WRONG_PASSWORD: return "Wrong Password";     // 6
+   #endif
    case WL_DISCONNECTED: return "Disconnected";         // 7
    default: return "Unknown status";                    //
    }
 }
 
-void xDisplayStatus (void)
-{
-   #if defined (NOT_AP)
-      Serial.print ("localIP: ");
-      Serial.println (WiFi.localIP());
-   #else
-      Serial.print ("AP: ");
-      Serial.println (WiFi.softAPIP());
-   #endif
-}
 
-
-void displayClients () 
-{
-   unsigned char number_client;
-   struct station_info *stat_info;
-   
-   struct ip_addr *IPaddress;
-   IPAddress address;
-   int i=1;
-   
-   number_client= wifi_softap_get_station_num();
-   stat_info = wifi_softap_get_station_info();
-   
-   Serial.print(" Total connected_client are = ");
-   Serial.println(number_client);
-   
-   while (stat_info != NULL) 
-   {
-      IPaddress = (ip_addr *) &stat_info->ip;
-      address = IPaddress->addr;
-      
-      Serial.print("client= ");
-      
-      Serial.print(i);
-      Serial.print(" ip adress is = ");
-      Serial.print((address));
-      Serial.print(" with mac adress is = ");
-      
-      Serial.print(stat_info->bssid[0],HEX);
-      Serial.print(stat_info->bssid[1],HEX);
-      Serial.print(stat_info->bssid[2],HEX);
-      Serial.print(stat_info->bssid[3],HEX);
-      Serial.print(stat_info->bssid[4],HEX);
-      Serial.print(stat_info->bssid[5],HEX);
-      
-      stat_info = STAILQ_NEXT(stat_info, next);
-      i++;
-      Serial.println();
-   }
-   wifi_softap_free_station_info();
-
-   delay(500);
-}
