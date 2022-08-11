@@ -68,11 +68,20 @@ const char *variableName (const char *filename)
    else
       strcpy_s (varname, sizeof varname, filename);
 
-   // Replace the period between the filename and the extension with
-   // an underscore.
-   pos = strchr (varname, '.');
-   if (pos != NULL)
-      *pos = '_';
+   // Replace all period and minus signs with an underscore.
+   do
+   {
+      pos = strchr (varname, '.');
+      if (pos != NULL)
+         *pos = '_';
+   } while (pos != NULL);
+
+   do
+   {
+      pos = strchr (varname, '-');
+      if (pos != NULL)
+         *pos = '_';
+   } while (pos != NULL);
 
    printf ("    -> %s\n", varname);
    return varname;

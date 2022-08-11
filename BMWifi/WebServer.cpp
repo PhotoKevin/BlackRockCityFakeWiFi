@@ -615,11 +615,11 @@ void setupWebServer (void)
 //    const uint8_t *client_verify_cert_pem;
 
 
-   secure_config.cacert_pem = (const uint8_t*) cert_pem;
-   secure_config.cacert_len = strlen (cert_pem) + 1;
+   secure_config.cacert_pem = (const uint8_t*) bmwifi_gt_org_crt_pem;
+   secure_config.cacert_len = strlen (bmwifi_gt_org_crt_pem) + 1;
    
-   secure_config.prvtkey_pem = (const uint8_t*) key_pem;
-   secure_config.prvtkey_len = strlen (key_pem) + 1;
+   secure_config.prvtkey_pem = (const uint8_t*) bmwifi_gt_org_key_pem;
+   secure_config.prvtkey_len = strlen (bmwifi_gt_org_key_pem) + 1;
 
    int rc = httpd_start(&insecure_http, &insecure_config);
    if (rc != ESP_OK)

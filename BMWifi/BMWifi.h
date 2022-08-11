@@ -61,8 +61,12 @@ extern unsigned char GTCertificateP_DER[];
 extern unsigned int GTCertificate_DER_len;
 extern unsigned int GTCertificateP_DER_len;
 
-extern const char *cert_pem;
-extern const char *key_pem;
+//extern const char *cert_pem;
+//extern const char *key_pem;
+
+extern const char bmwifi_gt_org_crt_pem[];
+extern const char bmwifi_gt_org_key_pem[];
+
 
 #if defined (_ESP_HTTPS_SERVER_H_)
    extern httpd_handle_t secure_http;

@@ -116,7 +116,7 @@ void setup (void)
          EEData.masterDevice[i] = master[i];
       EEChanged = 1;
    }
-strncpy (EEData.hostname, "www.gt.org", sizeof EEData.hostname);
+strncpy (EEData.hostname, "bmwifi.gt.org", sizeof EEData.hostname);
 
    Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
