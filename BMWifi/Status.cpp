@@ -14,6 +14,21 @@
 
 #include "BMWifi.h"
 
+String getTitle (void)
+{
+
+   String json = "";
+
+   const int capacity = JSON_OBJECT_SIZE(2);
+   StaticJsonDocument<capacity> root;
+
+   root["title"]            = EEData.SSID;
+   serializeJson (root, json);
+   Serial.println (json);
+
+   return json;
+}
+
 String getSystemInformation (void)
 {
    String json = "";
@@ -104,7 +119,7 @@ String getSettings (httpd_req_t *req)
    
    root["station_mac"] = WiFi.macAddress();
    root["station_ip"] = WiFi.localIP().toString();
-   serializeJson ( root, json);
+   serializeJson (root, json);
 
    return json;
 }

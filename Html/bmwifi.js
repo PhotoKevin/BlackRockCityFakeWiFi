@@ -28,11 +28,37 @@ function getCookie (cName)
    return res
 }
 
+const xhr = new XMLHttpRequest();
+function getTitleHandler ()
+{
+   if (xhr.readyState === XMLHttpRequest.DONE)
+   {
+      if (xhr.status === 200)
+      {
+         var data = JSON.parse (xhr.responseText);
+         document.title = data.title;
+         setElementInnerText ("top", data.title);
+      }
+      else
+      {
+         //alert('There was a problem with the request: ' + xhr.status);
+      }
+   }
+}
+
+
 function setTitle ()
 {
-   let title = getCookie ("title");
-   if (title == null)
-      title = "BRC Fake WiFi";
-   document.title = title;
-   setElementInnerText ("top", title);
+   if (window.location.protocol != "file:")
+   {
+      const url = 'getJson';
+      var formData = new URLSearchParams ();
+      formData.append ("request", "getTitle");
+
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader ("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onreadystatechange = getTitleHandler;
+
+      xhr.send (formData);
+   }
 }

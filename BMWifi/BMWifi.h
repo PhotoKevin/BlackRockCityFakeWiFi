@@ -92,7 +92,7 @@ void client_status (void);
 void dump (void *pkt, size_t len);
 
 String getSystemInformation (void);
-
+String getTitle (void);
 
 
 bool Login (String user, String pw, long long device, String &token);

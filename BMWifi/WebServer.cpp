@@ -148,18 +148,12 @@ static bool allowSend (httpd_req_t *req, String page)
    return rc;
 }
 
-// Can't be a local. From the docs:
-// Make sure that the lifetime of the field value strings are valid till send function is called.
-char titleCookie[200];
 
 static void sendHeaders (httpd_req_t *req)
 {
    httpd_resp_set_hdr (req, "Cache-Control", "no-cache, no-store, must-revalidate");
    httpd_resp_set_hdr (req, "Pragma", "no-cache");
    httpd_resp_set_hdr (req, "Expires", "-1");
-
-   snprintf (titleCookie, sizeof titleCookie, "title=\"%s\"", EEData.SSID);
-   httpd_resp_set_hdr (req, "Set-Cookie", titleCookie);
 }
 
 static void sendHtml (httpd_req_t *req, const char *txt)
@@ -323,10 +317,6 @@ static esp_err_t handleLogin (httpd_req_t *req)
 
    if (loggedin)
    {
-      char title[50];
-      snprintf (title, sizeof title, "auth=%s", cookie.c_str ());
-      httpd_resp_set_hdr (req, "Set-Cookie", title);
-
       send302 (req, "status.html");
       return ESP_FAIL;
    }
@@ -391,6 +381,8 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
       if (isLoggedIn (req))
          sendJs (req, getSettings (req).c_str());
    }
+   else if (strcmp (request, "getTitle") == 0)
+      sendJs (req, getTitle ().c_str());
    else if (strcmp (request, "resetCounts") == 0)
    {
       if (isLoggedIn (req))
@@ -405,7 +397,6 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
    }
    else if (strcmp (request, "") == 0)
       Serial.println ("Empty Ajax request");
-
    else
       Serial.printf ("Unknown AJAX request: %s\n", request);
 
