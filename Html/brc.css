@@ -78,3 +78,9 @@ input
    vertical-align: middle;
    font-size: inherit;
 }
+
+a:visited,a:link
+{
+  color: inherit;
+  text-decoration: inherit;
+}

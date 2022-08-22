@@ -1,6 +1,8 @@
-//#define USE_LCD_DISPLAY
 //#define NOT_AP    // Define for debugging as just a device on the network
 
+#if defined (ARDUINO_heltec_wifi_kit_32)
+   #define USE_LCD_DISPLAY
+#endif   
 
 #include <DNSServer.h>
 #include <Wire.h>
@@ -66,23 +68,23 @@ DNSServer dnsServer;
 
 struct eeprom_data_t  EEData;
 int EEChanged = 0;
+int RestartRequired = 0;
 
 #if defined (NOT_AP)
-void  ConnectToNetwork (void);
+   void  ConnectToNetwork (void);
+#else
+   void  SetupAP (void);
 #endif
-void  SetupAP (void);
 
 //ADC_MODE(ADC_VCC);      // Needed to make the ESP.getVCC function work.
 
 //#include "heltec.h"
 void setup (void)
 {
+   RestartRequired = 0;
    Serial.begin (115200);                           // full speed to monitor
-   
-   // Initialize the Heltec ESP32 object
-//   Heltec.begin(true /*DisplayEnable Enable*/, true /*LoRa Disable*/, true /*Serial Enable*/, true /*PABOOST Enable*/, 470E6 /**/);
-//	Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/);
 
+   Serial.printf ("tolower of '0' -> %c\n", tolower ('0'));
 
 #if defined (USE_LCD_DISPLAY)
    u8x8.begin();
@@ -116,7 +118,6 @@ void setup (void)
          EEData.masterDevice[i] = master[i];
       EEChanged = 1;
    }
-strncpy (EEData.hostname, "bmwifi.gt.org", sizeof EEData.hostname);
 
    Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
@@ -148,10 +149,11 @@ strncpy (EEData.hostname, "bmwifi.gt.org", sizeof EEData.hostname);
 void SetupAP (void)
 {
    int rc;
+   WiFi.disconnect (true, true);
    WiFi.mode (WIFI_AP);
 
-//   apIP = IPAddress(EEData.ipAddress);
-//   netMsk = IPAddress(EEData.netmask);
+   apIP = IPAddress(EEData.ipAddress);
+   netMsk = IPAddress(EEData.netmask);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
    rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
@@ -270,7 +272,7 @@ void DisplayOLEDStatus (void)
    if (strncmp (lastPageReq, prevLastPageReq, sizeof prevLastPageReq) != 0)
    {
       strncpy (prevLastPageReq, lastPageReq, sizeof prevLastPageReq);
-      Serial.print ("lastPageReq: ");
+      Serial.print ("Last Page Requested: ");
       Serial.println (lastPageReq);
    }
 
@@ -285,6 +287,12 @@ void loop (void)
    static unsigned long prevHeap = 4000000;
    DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
+
+   if (RestartRequired)
+   {
+      ESP.restart ();
+      while (1);
+   }
 
    static int noStats = -1;
    if (noStats != WiFi.softAPgetStationNum())
@@ -364,4 +372,17 @@ String  WiFiStatus (int s)
    }
 }
 
+static char localIPAddress[4*3+3+1] = "";
+const char *localIP (void)
+{
+   if (localIPAddress[0] =='\0')
+   {
+      #if defined (NOT_AP)
+         strncpy (localIPAddress, WiFi.localIP().toString().c_str(), sizeof localIPAddress);
+      #else
+         strncpy (localIPAddress, WiFi.softAPIP().toString().c_str(), sizeof localIPAddress);
+      #endif
+   }
 
+   return localIPAddress;   
+}

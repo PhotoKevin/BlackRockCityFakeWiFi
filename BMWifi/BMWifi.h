@@ -27,6 +27,7 @@ struct eeprom_data_t
 
 extern char lastPageReq[512];
 extern int EEChanged;
+extern int RestartRequired;
 
 extern const char *myHostname;
 
@@ -61,9 +62,6 @@ extern unsigned char GTCertificateP_DER[];
 extern unsigned int GTCertificate_DER_len;
 extern unsigned int GTCertificateP_DER_len;
 
-//extern const char *cert_pem;
-//extern const char *key_pem;
-
 extern const char bmwifi_gt_org_crt_pem[];
 extern const char bmwifi_gt_org_key_pem[];
 
@@ -72,7 +70,6 @@ extern const char bmwifi_gt_org_key_pem[];
    extern httpd_handle_t secure_http;
    extern httpd_handle_t insecure_http;
    long long clientAddress (httpd_req_t *req);
-//   bool isMasterDevice (httpd_req_t *req);
    bool isLoggedIn (httpd_req_t *req);
    String getSettings (httpd_req_t *req);
 #endif
@@ -88,14 +85,15 @@ void ReadEEData (int address, void *data, size_t nbytes);
 void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 
 void client_status (void);
+const char *localIP (void);
 
-void dump (void *pkt, size_t len);
+//void dump (void *pkt, size_t len);
 
 String getSystemInformation (void);
 String getTitle (void);
+void strtrim (char *str);
 
-
-bool Login (String user, String pw, long long device, String &token);
+bool Login (String user, String pw, long long device);
 
 void expireBanned (void);
 int banExpires (long long address);

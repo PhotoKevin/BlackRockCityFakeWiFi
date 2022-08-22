@@ -17,30 +17,12 @@
 struct authenticated_t
 {
    long long device;
-   String cookie;
    time_t expires;
 };
 struct  authenticated_t authenticated[MAXLOGINS];
 static void expireDevices (void);
 static bool isMasterDevice (httpd_req_t *req);
 
-static String getAuthToken (httpd_req_t *req)
-{
-   char cookie[208];
-   size_t bufsize = sizeof cookie;
-   esp_err_t rc;
-
-   rc = httpd_req_get_cookie_val (req, "auth", cookie, &bufsize);
-   if (rc == ESP_OK )
-   {
-      Serial.printf ("Found cookie: '%s'\n", cookie);
-      return cookie;  
-   }
-   else
-      Serial.printf ("No cookie: rc=%d\n", rc);
-
-  return String ("");
-}
 
 static long long mac2DeviceID (uint8_t *mac)
 {
@@ -75,7 +57,7 @@ static void initSecurity (void)
    {
       Serial.println ("Initializing security");
       for (int i=0; i<MAXLOGINS; i++)
-         authenticated[i].cookie = "";
+         authenticated[i].device = 0;
       initialized = true;
    }
 }
@@ -83,24 +65,21 @@ static void initSecurity (void)
 
 bool isLoggedIn (httpd_req_t *req)
 {
-   Serial.printf ("isLoggedIn?");
+   Serial.printf ("isLoggedIn?\n");
    initSecurity ();
    expireDevices ();
 
    if (isMasterDevice (req))
       return true;
 
-
    long long device = clientAddress (req);
-   String cookie = getAuthToken (req);
 
-   Serial.printf ("isLoggedIn? %llx '%s'", device, cookie.c_str ());
+   Serial.printf ("  <-- %llx\n", device);
    for (int i=0; i<MAXLOGINS; i++)
    {
-      if (authenticated[i].cookie != "")
+      if (authenticated[i].device != 0)
       {
-//         Serial.printf ("Does cookie '%s' contain '%s'?\n", cookie.c_str(), authenticated[i].cookie.c_str());
-         if (cookie.indexOf (authenticated[i].cookie) >= 0 && device == authenticated[i].device)
+         if (device == authenticated[i].device)
          {
             Serial.println ("  --> Yes, logged in");
             return true;
@@ -112,7 +91,7 @@ bool isLoggedIn (httpd_req_t *req)
    return false;
 }
 
-bool Login (String user, String pw, long long device, String &token)
+bool Login (String user, String pw, long long device)
 {
    Serial.printf ("Logging in\n");
    initSecurity ();
@@ -126,17 +105,11 @@ bool Login (String user, String pw, long long device, String &token)
       Serial.printf ("User/Pw good\n");
       for (int j=0; j<MAXLOGINS; j++)
       {
-         if (authenticated[j].cookie == "")
+         if (authenticated[j].device == 0)
          {
-            Serial.printf ("Pos %d is open\n", j);
-            char timestr[20];
-            snprintf (timestr, sizeof timestr, "%lld", (long long int) time (NULL));
             authenticated[j].device = device;
-
-            authenticated[j].cookie = timestr;
             authenticated[j].expires = time (NULL) + 3*60;  // three minutes
-            token = authenticated[j].cookie;
-            Serial.printf ("Logged in user %s cookie %s\n", user.c_str(), token.c_str ());
+            Serial.printf ("Logged in user %s\n", user.c_str());
 
             return true;
          }
@@ -152,10 +125,10 @@ static void expireDevices (void)
    time_t current = time (NULL);
    for (int i=0; i<MAXLOGINS; i++)
    {
-      if ((authenticated[i].cookie != "") && (difftime (current, authenticated[i].expires) > 0))
+      if ((authenticated[i].device != 0) && (difftime (current, authenticated[i].expires) > 0))
       {
-         Serial.println ("Expire " + authenticated[i].cookie);
-         authenticated[i].cookie = "";
+         Serial.println ("Expire " + authenticated[i].device);
+         authenticated[i].device = 0;
       }
    }
 }
@@ -181,7 +154,7 @@ static long getClientIp (httpd_req_t *req)
       {
          struct sockaddr_in   *addr_in = (struct sockaddr_in *) &name;
          in_addr_t ip_address = addr_in->sin_addr.s_addr;
-         // Serial.printf ("ip? 0x%08lx\n", (long) ip_address);
+
          return (long) ip_address;
 
       }
@@ -209,43 +182,37 @@ long long clientAddress (httpd_req_t *req)
 {
    long long address = 0;
    long clientIP = getClientIp (req);
+
+   wifi_sta_list_t wifi_sta_list;
+   tcpip_adapter_sta_list_t adapter_sta_list;
    
+   memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
+	memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-// maybe this https://github.com/lucadentella/esp32-tutorial/blob/9137ffa6e34499d8f9a01fd390f74b953985c80b/12_accesspoint/main/main.c
-   #if defined (ESP32)
-      wifi_sta_list_t wifi_sta_list;
-      tcpip_adapter_sta_list_t adapter_sta_list;
+   esp_wifi_ap_get_sta_list (&wifi_sta_list);
+   tcpip_adapter_get_sta_list (&wifi_sta_list, &adapter_sta_list);
    
-   	memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
-	   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+   for (int i = 0; i < adapter_sta_list.num; i++) 
+   {
+   	tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
+//    Serial.printf("%d - mac: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x - IP: \n", i,
+//		station.mac[0], station.mac[1], station.mac[2],
+//		station.mac[3], station.mac[4], station.mac[5]);
+//      Serial.printf ("%lx vs %lx\n", clientIP, station.ip.addr);
 
-      esp_wifi_ap_get_sta_list (&wifi_sta_list);
-      tcpip_adapter_get_sta_list (&wifi_sta_list, &adapter_sta_list);
-      
-      for(int i = 0; i < adapter_sta_list.num; i++) 
-      {
-   		tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
-//       Serial.printf("%d - mac: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x - IP: \n", i,
-//			station.mac[0], station.mac[1], station.mac[2],
-//			station.mac[3], station.mac[4], station.mac[5]);
-//         Serial.printf ("%lx vs %lx\n", clientIP, station.ip.addr);
+      if (clientIP == station.ip.addr)
+         address = mac2DeviceID (station.mac);
+   }
 
-         if (clientIP == station.ip.addr)
-            address = mac2DeviceID (station.mac);
-      }
-
-   #endif
 
    if (address == 0)
       address = ip2DeviceID (clientIP);
       
    return address;
-   //return getClientIp (req);
 }
 
 static bool isMasterDevice (httpd_req_t *req)
 {
-   //return true;
    // Serial.printf ("isMasterDevice\n");
    // Serial.printf ("  %lx",  mac2DeviceID (EEData.masterDevice));
    return clientAddress (req) == mac2DeviceID (EEData.masterDevice);

@@ -41,6 +41,7 @@ static char *getHeader (httpd_req_t *req, const char *headername, char *header, 
       }
    }
 
+   strtrim (header);
    return header;
 }
 
@@ -52,7 +53,10 @@ static char *getUserAgent (httpd_req_t *req, char *agent, size_t agentsize)
 
 static char *getHost (httpd_req_t *req, char *hostname, size_t hostsize)
 {
-   return getHeader (req, "Host", hostname, hostsize);
+   char *rc = getHeader (req, "Host", hostname, hostsize);
+   size_t len = strlen (hostname);
+
+   return rc;
 }
 
 
@@ -94,6 +98,65 @@ static char *getArgString (httpd_req_t *req)
    return buf;
 }
 
+
+void strtrim (char *str)
+{
+   size_t               len;
+
+   if (str != NULL)
+   {
+      len                  =  strlen (str);
+      while ((len > 0) && isspace (str[len-1]))
+      {
+         str[len-1]        =  '\0';
+         len               -= 1;
+      }
+
+      char *p              =  str;
+      while (isspace (*p))
+         p                 += 1;
+
+      if (p != str)
+         memmove (str, p, strlen(p)+1);
+   }
+}
+
+void urldecode (char *tgt, const char *src)
+{
+   char *dst = tgt;   
+   while (*src) 
+   {
+      if ((src[0] == '%') && isxdigit (src[1]) && isxdigit (src[2])) 
+      {
+         char a, b;
+         a = src[1];
+         b = src[2];
+
+         if (isdigit (a))
+            a -= '0';
+         else
+            a = tolower (a) - 'a' + 10;
+
+         if (isdigit (b))
+            b -= '0';
+         else
+            b = tolower (b) - 'a' + 10;
+
+         *dst++ = a*0x10 + b;
+         src += 3;
+      } 
+      else if (*src == '+') 
+      {
+         *dst++ = ' ';
+         src++;
+      }
+      else
+         *dst++ = *src++;
+   }
+   *dst++ = '\0';
+
+   strtrim (tgt);
+}
 
 
 void setClock (const char *timestamp)
@@ -151,9 +214,9 @@ static bool allowSend (httpd_req_t *req, String page)
 
 static void sendHeaders (httpd_req_t *req)
 {
-   httpd_resp_set_hdr (req, "Cache-Control", "no-cache, no-store, must-revalidate");
-   httpd_resp_set_hdr (req, "Pragma", "no-cache");
-   httpd_resp_set_hdr (req, "Expires", "-1");
+   // httpd_resp_set_hdr (req, "Cache-Control", "no-cache, no-store, must-revalidate");
+   // httpd_resp_set_hdr (req, "Pragma", "no-cache");
+   // httpd_resp_set_hdr (req, "Expires", "-1");
 }
 
 static void sendHtml (httpd_req_t *req, const char *txt)
@@ -189,7 +252,7 @@ static void sendJs (httpd_req_t *req, const char *txt)
 
 static void sendCss (httpd_req_t *req, const char *txt)
 {
-   char host[512];
+   char host[200];
    snprintf (lastPageReq, sizeof lastPageReq, "%s://%s%s", getProtocol (req), getHost (req, host, sizeof host), req->uri);
    Serial.printf ("SendCss %s\n", lastPageReq);
 
@@ -209,7 +272,7 @@ static void send302 (httpd_req_t *req, const char *page)
    if (httpd_get_global_user_ctx (req->handle) != NULL)
       snprintf (location, sizeof location, "https://%s/%s", EEData.hostname, page);
    else
-      snprintf (location, sizeof location, "http://%s/%s", getHost (req, host, sizeof host), page);
+      snprintf (location, sizeof location, "http://%s/%s", localIP (), page);
 
    Serial.printf ("send302 -> %s\n", location);
    sendHeaders (req);
@@ -217,8 +280,11 @@ static void send302 (httpd_req_t *req, const char *page)
    httpd_resp_set_hdr (req, "Location", location);
    httpd_resp_set_status (req, "302");
    httpd_resp_set_type (req, "text/html");
-   httpd_resp_sendstr (req, "<html />");
+   httpd_resp_sendstr (req, redirect_html);
    Serial.println ("302 sent");
+   
+//   int socket = httpd_req_to_sockfd (req);
+//   close (socket);   
 }
 
 static esp_err_t  handleRestrictedPage (httpd_req_t *req, const char *requestedPage)
@@ -293,7 +359,7 @@ static esp_err_t handleLogin (httpd_req_t *req)
    argumentBuffer = getArgString (req);
    if (argumentBuffer != NULL)
    {
-      Serial.println ("getting args");
+      Serial.printf ("getting args %s\n", argumentBuffer);
       if (httpd_query_key_value (argumentBuffer, "username", username, sizeof username) != ESP_OK)
          username[0] = '\0';
 
@@ -304,15 +370,18 @@ static esp_err_t handleLogin (httpd_req_t *req)
          timestamp[0] = '\0';
       free (argumentBuffer);
 
+      urldecode (username, username);
+      urldecode (password, password);
+      urldecode (timestamp, timestamp);
+
       Serial.printf ("user: %s; pass:%s; time:%s", username, password, timestamp);
    }
 
-   String cookie = "";
    bool loggedin = false;
    if (username[0] != '\0' && password[0] != '\0')
    {
-      //setClock (timestamp);
-      loggedin = Login (username, password, clientAddress (req), cookie);
+      setClock (timestamp);
+      loggedin = Login (username, password, clientAddress (req));
    }   
 
    if (loggedin)
@@ -329,7 +398,21 @@ static esp_err_t handleLogin (httpd_req_t *req)
 
 static esp_err_t handleQuestion (httpd_req_t *req)    
 {
-   //setClock (req);
+   char *argumentBuffer;
+   char timestamp[50];
+   timestamp[0] = '\0';
+
+   argumentBuffer = getArgString (req);
+   if (argumentBuffer != NULL)
+   {
+      if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
+         timestamp[0] = '\0';
+      free (argumentBuffer);
+
+      urldecode (timestamp, timestamp);
+   }
+
+   setClock (timestamp);
    sendHtml (req, question_html);
    return ESP_OK;
 }
@@ -351,8 +434,10 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
       timestamp[0] = '\0';
 
    free (argumentBuffer);
-
-   
+   urldecode (request, request);
+   urldecode (timestamp, timestamp);   
+   if (!clockSet)
+      setClock (timestamp);
 
    Serial.printf ("Ajax request of %s\n", request);
 
@@ -370,9 +455,6 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
    }
    else if (strcmp (request, "status") == 0)
    {
-      if (!clockSet)
-         setClock (timestamp);
-
       if (isLoggedIn (req))
          sendJs (req, getSystemInformation ().c_str());
    }
@@ -419,9 +501,9 @@ static void parseAddress (uint8_t *addressBytes, const char *address, int base)
    char *p = s;
    while (p != NULL && strlen (p) > 0)
    {
-      Serial.printf ("... %s\n", p);
+//      Serial.printf ("... %s\n", p);
       addressBytes[i++] = (uint8_t) strtol (p, &p, base);
-      Serial.printf ("....%d\n", addressBytes[i-1]);
+//      Serial.printf ("....%d\n", addressBytes[i-1]);
       if (*p != '\0')
          p++;
    }
@@ -430,16 +512,18 @@ static void parseAddress (uint8_t *addressBytes, const char *address, int base)
 esp_err_t handleSettingsPost (httpd_req_t *req)
 {
    char *argumentBuffer;
-   char ssid[200];
-   char username[200];
-   char password[200];
-   char hostname[200];
-   char masterDevice[200];
-   char ipAddress[200];
-   char netmask[200];
-   char playSound[200];
+   char ssid[100];
+   char username[50];
+   char password[50];
+   char hostname[100];
+   char masterDevice[50];
+   char ipAddress[50];
+   char netmask[50];
+   char playSound[10];
 
    argumentBuffer = getArgString (req);
+
+   Serial.printf ("AgrBuf: %s\n", argumentBuffer);
 
    if (httpd_query_key_value (argumentBuffer, "ssid", ssid, sizeof ssid) != ESP_OK)
       ssid[0] = '\0';
@@ -463,8 +547,13 @@ esp_err_t handleSettingsPost (httpd_req_t *req)
 
    free (argumentBuffer);
 
-   // TODO: Trim whitepace
-
+   urldecode (ssid, ssid);
+   urldecode (username, username);
+   urldecode (password, password);
+   urldecode (hostname, hostname);
+   urldecode (masterDevice, masterDevice);
+   urldecode (ipAddress, ipAddress);
+   urldecode (netmask, netmask);
 
    Serial.println ("handleSettingsPost");
    if (isLoggedIn (req))
@@ -495,10 +584,7 @@ esp_err_t handleSettingsPost (httpd_req_t *req)
          EEData.playSound = atoi (playSound);
 
       EEChanged = 1;
-
-//         ESP.restart ();
-//         while (1);
-
+      RestartRequired = 1;
    }
 
    return handleSettings (req);
@@ -612,18 +698,18 @@ void setupWebServer (void)
    secure_config.prvtkey_pem = (const uint8_t*) bmwifi_gt_org_key_pem;
    secure_config.prvtkey_len = strlen (bmwifi_gt_org_key_pem) + 1;
 
-   int rc = httpd_start(&insecure_http, &insecure_config);
+   int rc = httpd_start (&insecure_http, &insecure_config);
    if (rc != ESP_OK)
       Serial.printf ("Error %d starting insecure_http\n", rc);
 
-   int rcssl = httpd_ssl_start (&secure_http, &secure_config);
+   int rcssl = 0;
+   rcssl = httpd_ssl_start (&secure_http, &secure_config);
    if (rcssl != ESP_OK)
       Serial.printf ("Error %d starting secure_http\n", rcssl);
-      
 
    if ((rcssl == ESP_OK) || (rc == ESP_OK))
    {
-      Serial.println ("Both servers started, registering handlers");
+      Serial.println ("Server(s) started, registering handlers");
 
       httpd_register_err_handler (insecure_http, HTTPD_404_NOT_FOUND, notFound);
       httpd_register_err_handler (secure_http, HTTPD_404_NOT_FOUND, notFound);
