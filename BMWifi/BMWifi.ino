@@ -1,4 +1,4 @@
-//#define NOT_AP    // Define for debugging as just a device on the network
+#define NOT_AP    // Define for debugging as just a device on the network
 
 #if defined (ARDUINO_heltec_wifi_kit_32)
    #define USE_LCD_DISPLAY
@@ -179,8 +179,6 @@ void SetupAP (void)
 #if defined (NOT_AP)
 void ConnectToNetwork (void)
 {
-   char stat[20];
-   
    Serial.print ("Connecting");
    WiFi.disconnect ();
    WiFi.mode (WIFI_STA);
@@ -191,6 +189,8 @@ void ConnectToNetwork (void)
    // Wait until we connect, and do some status messages
    while (WiFi.localIP()[0] == 0)
    {
+      char stat[20];
+   
       Serial.print (".");
       sprintf (stat, "%d\n", WiFi.status ());
       Serial.print (stat);
@@ -242,31 +242,31 @@ void DisplayOLEDStatus (void)
       prevActivity = EEData.lastActivity;
 
       char buffer[17];
-#if defined (USE_LCD_DISPLAY)
-      u8x8.drawString (0, 0, EEData.hostname);
-#endif
-      snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
-      Serial.println (buffer);
-#if defined (USE_LCD_DISPLAY)
-      pad (buffer, sizeof buffer);
-      u8x8.drawString (0, 1, buffer);
-#endif
+      #if defined (USE_LCD_DISPLAY)
+         u8x8.drawString (0, 0, EEData.hostname);
+      #endif
+         snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
+         Serial.println (buffer);
+      #if defined (USE_LCD_DISPLAY)
+         pad (buffer, sizeof buffer);
+         u8x8.drawString (0, 1, buffer);
+      #endif
 
-#if defined (ESP8266)
-      snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
-      Serial.println (buffer);
-#if defined (USE_LCD_DISPLAY)
-      pad (buffer, sizeof buffer);
-      u8x8.drawString (0, 2, buffer);
-#endif
-#endif
+      #if defined (ESP8266)
+         snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
+         Serial.println (buffer);
+         #if defined (USE_LCD_DISPLAY)
+            pad (buffer, sizeof buffer);
+            u8x8.drawString (0, 2, buffer);
+         #endif
+      #endif
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
-#if defined (USE_LCD_DISPLAY)
-      pad (buffer, sizeof buffer);
-      u8x8.drawString (0, 3, buffer);
-#endif
+      #if defined (USE_LCD_DISPLAY)
+         pad (buffer, sizeof buffer);
+         u8x8.drawString (0, 3, buffer);
+      #endif
    }
 
    if (strncmp (lastPageReq, prevLastPageReq, sizeof prevLastPageReq) != 0)
@@ -276,9 +276,9 @@ void DisplayOLEDStatus (void)
       Serial.println (lastPageReq);
    }
 
-#if defined (USE_LCD_DISPLAY)
-   u8x8.refreshDisplay();    // only required for SSD1606/7  
-#endif
+   #if defined (USE_LCD_DISPLAY)
+      u8x8.refreshDisplay();    // only required for SSD1606/7  
+   #endif
 }
 
 
@@ -291,7 +291,8 @@ void loop (void)
    if (RestartRequired)
    {
       ESP.restart ();
-      while (1);
+      while (1)
+         ;
    }
 
    static int noStats = -1;
