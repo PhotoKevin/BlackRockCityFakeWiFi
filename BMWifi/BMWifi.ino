@@ -1,4 +1,4 @@
-#define NOT_AP    // Define for debugging as just a device on the network
+//#define NOT_AP    // Define for debugging as just a device on the network
 
 #if defined (ARDUINO_heltec_wifi_kit_32)
    #define USE_LCD_DISPLAY
@@ -83,8 +83,6 @@ void setup (void)
 {
    RestartRequired = 0;
    Serial.begin (115200);                           // full speed to monitor
-
-   Serial.printf ("tolower of '0' -> %c\n", tolower ('0'));
 
 #if defined (USE_LCD_DISPLAY)
    u8x8.begin();
@@ -245,8 +243,10 @@ void DisplayOLEDStatus (void)
       #if defined (USE_LCD_DISPLAY)
          u8x8.drawString (0, 0, EEData.hostname);
       #endif
-         snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
-         Serial.println (buffer);
+     
+      snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
+      Serial.println (buffer);
+      yield ();
       #if defined (USE_LCD_DISPLAY)
          pad (buffer, sizeof buffer);
          u8x8.drawString (0, 1, buffer);
@@ -255,6 +255,7 @@ void DisplayOLEDStatus (void)
       #if defined (ESP8266)
          snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
          Serial.println (buffer);
+         yield ();
          #if defined (USE_LCD_DISPLAY)
             pad (buffer, sizeof buffer);
             u8x8.drawString (0, 2, buffer);
@@ -263,6 +264,7 @@ void DisplayOLEDStatus (void)
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
+      yield ();
       #if defined (USE_LCD_DISPLAY)
          pad (buffer, sizeof buffer);
          u8x8.drawString (0, 3, buffer);
@@ -274,6 +276,7 @@ void DisplayOLEDStatus (void)
       strncpy (prevLastPageReq, lastPageReq, sizeof prevLastPageReq);
       Serial.print ("Last Page Requested: ");
       Serial.println (lastPageReq);
+      yield ();
    }
 
    #if defined (USE_LCD_DISPLAY)
@@ -287,6 +290,15 @@ void loop (void)
    static unsigned long prevHeap = 4000000;
    DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
+   
+   static UBaseType_t prevHighWater = 1000000;
+   UBaseType_t highWater = uxTaskGetStackHighWaterMark (NULL);
+   if (highWater < prevHighWater)
+   {
+      Serial.printf ("High water: %lu\n", highWater);
+      prevHighWater = highWater;
+      yield ();
+   }
 
    if (RestartRequired)
    {
@@ -294,19 +306,22 @@ void loop (void)
       while (1)
          ;
    }
+   yield ();
 
    static int noStats = -1;
    if (noStats != WiFi.softAPgetStationNum())
    {
       noStats = WiFi.softAPgetStationNum();
       Serial.printf ("Connected devices: %d\n", noStats);
+      yield ();
    }
 
    unsigned long heap = ESP.getFreeHeap ();
    if (heap < prevHeap)
    {
- //     Serial.printf("Free Heap: %lu Bytes\n", heap);
+      Serial.printf("Free Heap: %lu Bytes\n", heap);
       prevHeap = heap;
+      yield ();
    }
 
    #if defined (NOT_AP)
@@ -316,6 +331,7 @@ void loop (void)
          connectRequired = false;
          ConnectToNetwork ();
          lastConnectTry = millis();
+         yield ();
       }
    #endif
 
@@ -327,12 +343,14 @@ void loop (void)
       connectRequired = true;
    }
 
+   yield ();
   
    if (laststatus != currentStatus) 
    {
       // WLAN status change
       Serial.print ("Status: ");
       Serial.println (WiFiStatus (currentStatus));
+      yield ();
       laststatus = currentStatus;
       if (currentStatus == WL_CONNECTED) 
       {
@@ -340,7 +358,7 @@ void loop (void)
          Serial.println ( "" );
          Serial.print ("IP address: ");
          Serial.println (WiFi.localIP());
-      
+         yield ();
       }
       else if (currentStatus == WL_NO_SSID_AVAIL) 
       {
@@ -349,7 +367,6 @@ void loop (void)
    }
 
    dnsServer.processNextRequest();
-   yield ();
 }
 
 /// Convert a WiFi Status to a human readable string

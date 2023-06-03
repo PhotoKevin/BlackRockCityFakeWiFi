@@ -1,11 +1,17 @@
 #include <Arduino.h>
 #include <time.h>
 
+// #define USE_HTTPSS
+
 #if defined (ESP32)
    #include <WiFi.h>
-
-   #include <esp_https_server.h>
    #include <lwip/sockets.h>
+
+   #if defined (USE_HTTPS)
+      #include <esp_https_server.h>
+   #else
+      #include <esp_http_server.h>
+   #endif
 
 #else
    #error Change your board type to an ESP32
@@ -37,7 +43,7 @@ static char *getHeader (httpd_req_t *req, const char *headername, char *header, 
             strncpy (header, buf, headersize);
             header[headersize-1] = '\0';
          }
-         free(buf);
+         free (buf);
       }
    }
 
@@ -79,12 +85,12 @@ static char *getArgString (httpd_req_t *req)
    }
    else
    {
-      size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+      size_t buf_len = httpd_req_get_url_query_len(req);
       Serial.printf ("getArgString from url: %d bytes\n", buf_len);
 
       if (buf_len > 1) 
       {
-         buf = (char *) malloc(buf_len);
+         buf = (char *) malloc(buf_len+1);
          if (buf != NULL)
          {
             if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
@@ -402,6 +408,7 @@ static esp_err_t handleQuestion (httpd_req_t *req)
    char timestamp[50];
    timestamp[0] = '\0';
 
+   Serial.printf ("handleQuestion\n");
    argumentBuffer = getArgString (req);
    if (argumentBuffer != NULL)
    {
@@ -414,6 +421,7 @@ static esp_err_t handleQuestion (httpd_req_t *req)
 
    setClock (timestamp);
    sendHtml (req, question_html);
+   Serial.printf ("Leave handleQuestion");
    return ESP_OK;
 }
 
@@ -426,14 +434,16 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
    char request[200];
    char timestamp[200];
    argumentBuffer = getArgString (req);
+   if (argumentBuffer != NULL)
+   {
+      if (httpd_query_key_value (argumentBuffer, "request", request, sizeof request) != ESP_OK)
+         request[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "request", request, sizeof request) != ESP_OK)
-      request[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
+         timestamp[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
-      timestamp[0] = '\0';
-
-   free (argumentBuffer);
+      free (argumentBuffer);
+   }
    urldecode (request, request);
    urldecode (timestamp, timestamp);   
    if (!clockSet)
@@ -522,30 +532,32 @@ esp_err_t handleSettingsPost (httpd_req_t *req)
    char playSound[10];
 
    argumentBuffer = getArgString (req);
+   if (argumentBuffer != NULL)
+   {
+      Serial.printf ("AgrBuf: %s\n", argumentBuffer);
 
-   Serial.printf ("AgrBuf: %s\n", argumentBuffer);
+      if (httpd_query_key_value (argumentBuffer, "ssid", ssid, sizeof ssid) != ESP_OK)
+         ssid[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "ssid", ssid, sizeof ssid) != ESP_OK)
-      ssid[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "username", username, sizeof username) != ESP_OK)
+         username[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "username", username, sizeof username) != ESP_OK)
-      username[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "password", password, sizeof password) != ESP_OK)
+         password[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "password", password, sizeof password) != ESP_OK)
-      password[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "hostname", hostname, sizeof hostname) != ESP_OK)
+         hostname[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "masterDevice", masterDevice, sizeof masterDevice) != ESP_OK)
+         masterDevice[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "ipAddress", ipAddress, sizeof ipAddress) != ESP_OK)
+         ipAddress[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "netmask", netmask, sizeof netmask) != ESP_OK)
+         netmask[0] = '\0';
+      if (httpd_query_key_value (argumentBuffer, "playSound", playSound, sizeof playSound) != ESP_OK)
+         playSound[0] = '\0';
 
-   if (httpd_query_key_value (argumentBuffer, "hostname", hostname, sizeof hostname) != ESP_OK)
-      hostname[0] = '\0';
-   if (httpd_query_key_value (argumentBuffer, "masterDevice", masterDevice, sizeof masterDevice) != ESP_OK)
-      masterDevice[0] = '\0';
-   if (httpd_query_key_value (argumentBuffer, "ipAddress", ipAddress, sizeof ipAddress) != ESP_OK)
-      ipAddress[0] = '\0';
-   if (httpd_query_key_value (argumentBuffer, "netmask", netmask, sizeof netmask) != ESP_OK)
-      netmask[0] = '\0';
-   if (httpd_query_key_value (argumentBuffer, "playSound", playSound, sizeof playSound) != ESP_OK)
-      playSound[0] = '\0';
-
-   free (argumentBuffer);
+      free (argumentBuffer);
+   }
 
    urldecode (ssid, ssid);
    urldecode (username, username);
@@ -616,14 +628,14 @@ esp_err_t handlePortalCheck (httpd_req_t *req)
    char host[59];   
    getHost (req, host, sizeof host);
 
-   Serial.printf ("handlePortalCheck: %s://%s%s\n", getProtocol (req), host, req->uri);
+   Serial.printf ("   handlePortalCheck: %s://%s%s\n", getProtocol (req), host, req->uri);
    if (isLoggedIn (req))
    {
       send302 (req, "status.html");
    }
    else
    {
-      Serial.printf ("Redirect %s://%s%s to captive portal\n", getProtocol (req), host, req->uri);
+      Serial.printf ("   Redirect %s://%s%s to captive portal\n", getProtocol (req), host, req->uri);
       send302 (req, "legal.html");
    }
 
@@ -641,7 +653,10 @@ static esp_err_t notFound (httpd_req_t *req, httpd_err_code_t error_code)
    snprintf (ipAddress, sizeof ipAddress, "%d.%d.%d.%d", EEData.ipAddress[0], EEData.ipAddress[1], EEData.ipAddress[2], EEData.ipAddress[3]);
 
    if ((strcmp (host, EEData.hostname) == 0) || (strcmp (host, ipAddress) == 0))
+   {
+      Serial.printf ("   Send 404\n");
       httpd_resp_send_404 (req);
+   }
    else
       handlePortalCheck (req);
 
@@ -676,43 +691,49 @@ void server_on (const char *uri, httpd_method_t method, esp_err_t (*handler)(htt
 
 void setupWebServer (void)
 {
-   httpd_ssl_config secure_config;
    httpd_config insecure_config;
-   memset (&secure_config, 0, sizeof secure_config);
    memset (&insecure_config, 0, sizeof insecure_config);
-   
-   secure_config = HTTPD_SSL_CONFIG_DEFAULT();
-   secure_config.httpd.max_uri_handlers   = 25;
-   secure_config.httpd.global_user_ctx = strdup ("https");
+
 
    insecure_config = HTTPD_DEFAULT_CONFIG ();
    insecure_config.max_uri_handlers   = 25;
    insecure_config.ctrl_port          = 32769;
-
+   int rc = ESP_OK + 1;
+   int rcssl = ESP_OK + 1;
 //    const uint8_t *client_verify_cert_pem;
-
-
-   secure_config.cacert_pem = (const uint8_t*) bmwifi_gt_org_crt_pem;
-   secure_config.cacert_len = strlen (bmwifi_gt_org_crt_pem) + 1;
    
-   secure_config.prvtkey_pem = (const uint8_t*) bmwifi_gt_org_key_pem;
-   secure_config.prvtkey_len = strlen (bmwifi_gt_org_key_pem) + 1;
 
-   int rc = httpd_start (&insecure_http, &insecure_config);
+   rc = httpd_start (&insecure_http, &insecure_config);
    if (rc != ESP_OK)
       Serial.printf ("Error %d starting insecure_http\n", rc);
 
-   int rcssl = 0;
-   rcssl = httpd_ssl_start (&secure_http, &secure_config);
-   if (rcssl != ESP_OK)
-      Serial.printf ("Error %d starting secure_http\n", rcssl);
+   #if defined (USE_HTTPS)
+      httpd_ssl_config secure_config;
+      memset (&secure_config, 0, sizeof secure_config);
+   
+      secure_config = HTTPD_SSL_CONFIG_DEFAULT();
+      secure_config.httpd.max_uri_handlers   = 25;
+      secure_config.httpd.global_user_ctx = strdup ("https");
+      secure_config.cacert_pem = (const uint8_t*) bmwifi_gt_org_chain_pem;
+      secure_config.cacert_len = strlen (bmwifi_gt_org_chain_pem) + 1;
+   
+      secure_config.prvtkey_pem = (const uint8_t*) bmwifi_gt_org_key_pem;
+      secure_config.prvtkey_len = strlen (bmwifi_gt_org_key_pem) + 1;
+      rcssl = httpd_ssl_start (&secure_http, &secure_config);
+      if (rcssl != ESP_OK)
+         Serial.printf ("Error %d starting secure_http\n", rcssl);
+   #endif
+
 
    if ((rcssl == ESP_OK) || (rc == ESP_OK))
    {
       Serial.println ("Server(s) started, registering handlers");
 
-      httpd_register_err_handler (insecure_http, HTTPD_404_NOT_FOUND, notFound);
-      httpd_register_err_handler (secure_http, HTTPD_404_NOT_FOUND, notFound);
+      if (insecure_http != NULL)
+         httpd_register_err_handler (insecure_http, HTTPD_404_NOT_FOUND, notFound);
+
+      if (secure_http != NULL)
+         httpd_register_err_handler (secure_http, HTTPD_404_NOT_FOUND, notFound);
 
       server_on ("/bmwifi.js", HTTP_GET, handleBMWifiJs);
       server_on ("/", HTTP_GET, handleLegal);

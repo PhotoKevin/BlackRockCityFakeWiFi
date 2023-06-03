@@ -62,11 +62,11 @@ extern unsigned char GTCertificateP_DER[];
 extern unsigned int GTCertificate_DER_len;
 extern unsigned int GTCertificateP_DER_len;
 
-extern const char bmwifi_gt_org_crt_pem[];
+extern const char bmwifi_gt_org_chain_pem[];
 extern const char bmwifi_gt_org_key_pem[];
 
 
-#if defined (_ESP_HTTPS_SERVER_H_)
+#if defined (_ESP_HTTPS_SERVER_H_) || defined (_ESP_HTTP_SERVER_H_)
    extern httpd_handle_t secure_http;
    extern httpd_handle_t insecure_http;
    long long clientAddress (httpd_req_t *req);

@@ -3,8 +3,14 @@
 #include <time.h>
 
 #if defined (ESP32)
-   #include <esp_https_server.h>
    #include "esp_wifi.h"
+   #include <lwip/sockets.h>
+
+   #if defined (USE_HTTPS)
+      #include <esp_https_server.h>
+   #else
+      #include <esp_http_server.h>
+   #endif
 #else
    #error Change your board type to an ESP32
 #endif
