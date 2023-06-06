@@ -61,7 +61,6 @@ static void initSecurity (void)
    static bool initialized = false;
    if (!initialized)
    {
-      Serial.println ("Initializing security");
       for (int i=0; i<MAXLOGINS; i++)
          authenticated[i].device = 0;
       initialized = true;
@@ -71,7 +70,6 @@ static void initSecurity (void)
 
 bool isLoggedIn (httpd_req_t *req)
 {
-   Serial.printf ("isLoggedIn?\n");
    initSecurity ();
    expireDevices ();
 
@@ -80,20 +78,20 @@ bool isLoggedIn (httpd_req_t *req)
 
    long long device = clientAddress (req);
 
-   Serial.printf ("  <-- %llx\n", device);
+   Serial.printf ("isLoggedIn?  %llx", device);
    for (int i=0; i<MAXLOGINS; i++)
    {
       if (authenticated[i].device != 0)
       {
          if (device == authenticated[i].device)
          {
-            Serial.println ("  --> Yes, logged in");
+            Serial.println ("  --> Yes");
             return true;
          }
       }
    }
 
-   Serial.println (" --> Not logged in");
+   Serial.println (" --> No");
    return false;
 }
 

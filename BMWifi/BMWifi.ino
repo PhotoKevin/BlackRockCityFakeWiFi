@@ -124,6 +124,8 @@ void setup (void)
       SetupAP ();
    #endif
 
+#if !defined (NOT_AP)
+
    // Setup MDNS responder
    Serial.println (EEData.hostname);
    if (!MDNS.begin (EEData.hostname)) 
@@ -133,7 +135,8 @@ void setup (void)
       Serial.printf ("mDNS responder started: %s\n", EEData.hostname);
       // Add service to MDNS-SD
       MDNS.addService ("http", "tcp", 80);
-      MDNS.addService ("https", "tcp", 443);
+//      MDNS.addService ("https", "tcp", 443);
+#endif
    }
 
 
@@ -150,8 +153,8 @@ void SetupAP (void)
    WiFi.disconnect (true, true);
    WiFi.mode (WIFI_AP);
 
-   apIP = IPAddress(EEData.ipAddress);
-   netMsk = IPAddress(EEData.netmask);
+   apIP = IPAddress (EEData.ipAddress);
+   netMsk = IPAddress (EEData.netmask);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
    rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
@@ -288,7 +291,7 @@ void DisplayOLEDStatus (void)
 void loop (void)
 {
    static unsigned long prevHeap = 4000000;
-   DisplayOLEDStatus ();
+//   DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
    
    static UBaseType_t prevHighWater = 1000000;
@@ -308,21 +311,21 @@ void loop (void)
    }
    yield ();
 
-   static int noStats = -1;
-   if (noStats != WiFi.softAPgetStationNum())
-   {
-      noStats = WiFi.softAPgetStationNum();
-      Serial.printf ("Connected devices: %d\n", noStats);
-      yield ();
-   }
+   // static int noStats = -1;
+   // if (noStats != WiFi.softAPgetStationNum())
+   // {
+   //    noStats = WiFi.softAPgetStationNum();
+   //    Serial.printf ("Connected devices: %d\n", noStats);
+   //    yield ();
+   // }
 
-   unsigned long heap = ESP.getFreeHeap ();
-   if (heap < prevHeap)
-   {
-      Serial.printf("Free Heap: %lu Bytes\n", heap);
-      prevHeap = heap;
-      yield ();
-   }
+   // unsigned long heap = ESP.getFreeHeap ();
+   // if (heap < prevHeap)
+   // {
+   //    Serial.printf("Free Heap: %lu Bytes\n", heap);
+   //    prevHeap = heap;
+   //    yield ();
+   // }
 
    #if defined (NOT_AP)
       if (connectRequired) 

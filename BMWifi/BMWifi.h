@@ -56,18 +56,7 @@ extern const char settings_html[];
 extern const char settings_js[];
 extern const char login_html[];
 
-
-extern unsigned char GTCertificate_DER[];
-extern unsigned char GTCertificateP_DER[];
-extern unsigned int GTCertificate_DER_len;
-extern unsigned int GTCertificateP_DER_len;
-
-extern const char bmwifi_gt_org_chain_pem[];
-extern const char bmwifi_gt_org_key_pem[];
-
-
-#if defined (_ESP_HTTPS_SERVER_H_) || defined (_ESP_HTTP_SERVER_H_)
-   extern httpd_handle_t secure_http;
+#if defined (_ESP_HTTP_SERVER_H_)
    extern httpd_handle_t insecure_http;
    long long clientAddress (httpd_req_t *req);
    bool isLoggedIn (httpd_req_t *req);

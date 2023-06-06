@@ -7,11 +7,7 @@
    #include <WiFi.h>
    #include <lwip/sockets.h>
 
-   #if defined (USE_HTTPS)
-      #include <esp_https_server.h>
-   #else
-      #include <esp_http_server.h>
-   #endif
+   #include <esp_http_server.h>
 
 #else
    #error Change your board type to an ESP32
@@ -20,14 +16,6 @@
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_server.html
 
 #include "BMWifi.h"
-
-
-static const char *http = "http";
-static const char *https = "https";
-static const char *getProtocol (httpd_req_t *req)
-{
-   return (httpd_get_global_user_ctx (req->handle) == NULL) ? http : https;
-}
 
 static char *getHeader (httpd_req_t *req, const char *headername, char *header, size_t headersize)
 {
@@ -228,7 +216,7 @@ static void sendHeaders (httpd_req_t *req)
 static void sendHtml (httpd_req_t *req, const char *txt)
 {
    char host[512]; 
-   snprintf (lastPageReq, sizeof lastPageReq, "%s://%s%s", getProtocol (req), getHost (req, host, sizeof host), req->uri);
+   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
 
    IPAddress clientIP = IPAddress (); // server.client().remoteIP();
    bool allowed = allowSend (req, req->uri);
@@ -246,7 +234,7 @@ static void sendHtml (httpd_req_t *req, const char *txt)
 static void sendJs (httpd_req_t *req, const char *txt)
 {
    char host[512];
-   snprintf (lastPageReq, sizeof lastPageReq, "%s://%s%s", getProtocol (req), getHost (req, host, sizeof host), req->uri);
+   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
    Serial.printf ("SendJs %s\n", lastPageReq);
 
    sendHeaders (req);
@@ -259,7 +247,7 @@ static void sendJs (httpd_req_t *req, const char *txt)
 static void sendCss (httpd_req_t *req, const char *txt)
 {
    char host[200];
-   snprintf (lastPageReq, sizeof lastPageReq, "%s://%s%s", getProtocol (req), getHost (req, host, sizeof host), req->uri);
+   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
    Serial.printf ("SendCss %s\n", lastPageReq);
 
    sendHeaders (req);
@@ -269,28 +257,27 @@ static void sendCss (httpd_req_t *req, const char *txt)
    yield ();
 }
 
-static void send302 (httpd_req_t *req, const char *page)
+static int  send302 (httpd_req_t *req, const char *page)
 {
    char location[1024];
    char host[60];
-   snprintf (lastPageReq, sizeof lastPageReq, "%s://%s%s", getProtocol (req), getHost (req, host, sizeof host), req->uri);
+   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
 
-   if (httpd_get_global_user_ctx (req->handle) != NULL)
-      snprintf (location, sizeof location, "https://%s/%s", EEData.hostname, page);
-   else
-      snprintf (location, sizeof location, "http://%s/%s", localIP (), page);
+   snprintf (location, sizeof location, "http://%s/%s", localIP (), page);
 
    Serial.printf ("send302 -> %s\n", location);
-   sendHeaders (req);
+//   sendHeaders (req);
 
+   httpd_resp_set_hdr (req, "X-Frame-Options", "deny" );
+   httpd_resp_set_hdr (req, "Cache-Control", "no-cache" );
+   httpd_resp_set_hdr (req, "Pragma", "no-cache" );
    httpd_resp_set_hdr (req, "Location", location);
-   httpd_resp_set_status (req, "302");
+   httpd_resp_set_status (req, "307");
    httpd_resp_set_type (req, "text/html");
    httpd_resp_sendstr (req, redirect_html);
    Serial.println ("302 sent");
-   
-//   int socket = httpd_req_to_sockfd (req);
-//   close (socket);   
+
+   return ESP_OK;
 }
 
 static esp_err_t  handleRestrictedPage (httpd_req_t *req, const char *requestedPage)
@@ -300,8 +287,7 @@ static esp_err_t  handleRestrictedPage (httpd_req_t *req, const char *requestedP
       sendHtml (req, requestedPage);
    else
    {
-      send302 (req, "login.html");
-      return ESP_FAIL;
+      return send302 (req, "login.html");
    }
    
    return ESP_OK;
@@ -392,8 +378,7 @@ static esp_err_t handleLogin (httpd_req_t *req)
 
    if (loggedin)
    {
-      send302 (req, "status.html");
-      return ESP_FAIL;
+      return send302 (req, "status.html");
    }
    else
       sendHtml (req, login_html);
@@ -628,18 +613,16 @@ esp_err_t handlePortalCheck (httpd_req_t *req)
    char host[59];   
    getHost (req, host, sizeof host);
 
-   Serial.printf ("   handlePortalCheck: %s://%s%s\n", getProtocol (req), host, req->uri);
+   Serial.printf ("   handlePortalCheck: http://%s%s\n", host, req->uri);
    if (isLoggedIn (req))
    {
-      send302 (req, "status.html");
+      return send302 (req, "status.html");
    }
    else
    {
-      Serial.printf ("   Redirect %s://%s%s to captive portal\n", getProtocol (req), host, req->uri);
-      send302 (req, "legal.html");
+      Serial.printf ("   Redirect http://%s%s to captive portal\n", host, req->uri);
+      return send302 (req, "legal.html");
    }
-
-   return ESP_FAIL;
 }
 
 static esp_err_t notFound (httpd_req_t *req, httpd_err_code_t error_code)
@@ -647,7 +630,7 @@ static esp_err_t notFound (httpd_req_t *req, httpd_err_code_t error_code)
    char host[512];
 
    getHost (req, host, sizeof host);
-   Serial.printf ("Not found: %s://%s%s\n", getProtocol (req), host, req->uri);
+   Serial.printf ("Not found: http://%s%s\n", host, req->uri);
 
    char ipAddress[50];
    snprintf (ipAddress, sizeof ipAddress, "%d.%d.%d.%d", EEData.ipAddress[0], EEData.ipAddress[1], EEData.ipAddress[2], EEData.ipAddress[3]);
@@ -679,13 +662,6 @@ void server_on (const char *uri, httpd_method_t method, esp_err_t (*handler)(htt
       if (rc != 0)
          Serial.printf ("insecure httpd_register_uri_handler FAILED: %d\n", rc);
    }
-
-   if (secure_http != NULL)
-   {
-      int rc = httpd_register_uri_handler (secure_http, &index_uri);
-      if (rc != 0)
-         Serial.printf ("secure httpd_register_uri_handler FAILED: %d\n", rc);
-   }
 }
 
 
@@ -699,41 +675,21 @@ void setupWebServer (void)
    insecure_config.max_uri_handlers   = 25;
    insecure_config.ctrl_port          = 32769;
    int rc = ESP_OK + 1;
-   int rcssl = ESP_OK + 1;
-//    const uint8_t *client_verify_cert_pem;
-   
 
    rc = httpd_start (&insecure_http, &insecure_config);
    if (rc != ESP_OK)
       Serial.printf ("Error %d starting insecure_http\n", rc);
 
-   #if defined (USE_HTTPS)
-      httpd_ssl_config secure_config;
-      memset (&secure_config, 0, sizeof secure_config);
-   
-      secure_config = HTTPD_SSL_CONFIG_DEFAULT();
-      secure_config.httpd.max_uri_handlers   = 25;
-      secure_config.httpd.global_user_ctx = strdup ("https");
-      secure_config.cacert_pem = (const uint8_t*) bmwifi_gt_org_chain_pem;
-      secure_config.cacert_len = strlen (bmwifi_gt_org_chain_pem) + 1;
-   
-      secure_config.prvtkey_pem = (const uint8_t*) bmwifi_gt_org_key_pem;
-      secure_config.prvtkey_len = strlen (bmwifi_gt_org_key_pem) + 1;
-      rcssl = httpd_ssl_start (&secure_http, &secure_config);
-      if (rcssl != ESP_OK)
-         Serial.printf ("Error %d starting secure_http\n", rcssl);
-   #endif
 
-
-   if ((rcssl == ESP_OK) || (rc == ESP_OK))
+   if (rc == ESP_OK)
    {
       Serial.println ("Server(s) started, registering handlers");
 
       if (insecure_http != NULL)
          httpd_register_err_handler (insecure_http, HTTPD_404_NOT_FOUND, notFound);
 
-      if (secure_http != NULL)
-         httpd_register_err_handler (secure_http, HTTPD_404_NOT_FOUND, notFound);
+      for (int i=0; i<HTTPD_ERR_CODE_MAX; i++)
+         httpd_register_err_handler (insecure_http, (httpd_err_code_t) i, notFound);
 
       server_on ("/bmwifi.js", HTTP_GET, handleBMWifiJs);
       server_on ("/", HTTP_GET, handleLegal);
