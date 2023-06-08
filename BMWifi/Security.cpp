@@ -1,16 +1,12 @@
 #include <Arduino.h>
+#include <stdint.h>
 #include <string.h>
 #include <time.h>
 
 #if defined (ESP32)
-   #include "esp_wifi.h"
-   #include <lwip/sockets.h>
-
-   #if defined (USE_HTTPS)
-      #include <esp_https_server.h>
-   #else
-      #include <esp_http_server.h>
-   #endif
+   #include <ESPAsyncWebSrv.h>
+#elif defined (ESP8266)
+   #include <ESPAsyncWebSrv.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -22,17 +18,17 @@
 
 struct authenticated_t
 {
-   long long device;
+   uint64_t device;
    time_t expires;
 };
 struct  authenticated_t authenticated[MAXLOGINS];
 static void expireDevices (void);
-static bool isMasterDevice (httpd_req_t *req);
+static bool isMasterDevice (AsyncWebServerRequest *req);
 
 
-static long long mac2DeviceID (uint8_t *mac)
+static uint64_t mac2DeviceID (uint8_t *mac)
 {
-   long long address = 0;
+   uint64_t address = 0;
 
    for (int i=0; i<6; i++)
    {
@@ -43,9 +39,9 @@ static long long mac2DeviceID (uint8_t *mac)
    return address;
 }
 
-static long long ip2DeviceID (IPAddress ip)
+static uint64_t ip2DeviceID (IPAddress ip)
 {
-   long long address = 0;
+   uint64_t address = 0;
 
    for (int i=0; i<4; i++)
    {
@@ -68,7 +64,7 @@ static void initSecurity (void)
 }
 
 
-bool isLoggedIn (httpd_req_t *req)
+bool isLoggedIn (AsyncWebServerRequest *req)
 {
    initSecurity ();
    expireDevices ();
@@ -76,7 +72,7 @@ bool isLoggedIn (httpd_req_t *req)
    if (isMasterDevice (req))
       return true;
 
-   long long device = clientAddress (req);
+   uint64_t device = clientAddress (req);
 
    Serial.printf ("isLoggedIn?  %llx", device);
    for (int i=0; i<MAXLOGINS; i++)
@@ -95,7 +91,7 @@ bool isLoggedIn (httpd_req_t *req)
    return false;
 }
 
-bool Login (String user, String pw, long long device)
+bool Login (String user, String pw, uint64_t device)
 {
    Serial.printf ("Logging in\n");
    initSecurity ();
@@ -145,46 +141,15 @@ void dump (void *pkt, size_t len)
 }
 
 
-static long getClientIp (httpd_req_t *req)
+static u32_t getClientIp (AsyncWebServerRequest *req)
 {
-   int socket = httpd_req_to_sockfd (req);
-   struct sockaddr_in6 name;
-   socklen_t namelen = sizeof name;
-
-   int rc = lwip_getpeername (socket, (struct sockaddr *) &name, &namelen);
-   if (rc == 0)
-   {
-      if (name.sin6_family == AF_INET)
-      {
-         struct sockaddr_in   *addr_in = (struct sockaddr_in *) &name;
-         in_addr_t ip_address = addr_in->sin_addr.s_addr;
-
-         return (long) ip_address;
-
-      }
-      else if (name.sin6_family == AF_INET6)
-      {
-        
-         // RFC4291 2.5.5.2.  IPv4-Mapped IPv6 Address
-         // ::ffff:x:x:x:x is an ipv4 mapped into ipv6
-         // As of 2022/07/30 that's the only type of IPv6 that the 
-         // SDK returns.
-
-         struct sockaddr_in6   *addr_in = (struct sockaddr_in6 *) &name;
-         // The Arduino compiler chokes if you do this as one statement, so break it 
-         // into two.
-         in6_addr x = addr_in->sin6_addr;
-         long ipv4 = x.un.u32_addr[3];
-         return ipv4;
-      }
-   }
-
-   return 0;
+    return req->client()->getRemoteAddress();
 }
 
-long long clientAddress (httpd_req_t *req)
+#if defined (ESP32)
+uint64_t clientAddress (AsyncWebServerRequest *req)
 {
-   long long address = 0;
+   uint64_t address = 0;
    long clientIP = getClientIp (req);
 
    wifi_sta_list_t wifi_sta_list;
@@ -193,7 +158,6 @@ long long clientAddress (httpd_req_t *req)
    memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
 	memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-   esp_wifi_ap_get_sta_list (&wifi_sta_list);
    tcpip_adapter_get_sta_list (&wifi_sta_list, &adapter_sta_list);
    
    for (int i = 0; i < adapter_sta_list.num; i++) 
@@ -208,14 +172,37 @@ long long clientAddress (httpd_req_t *req)
          address = mac2DeviceID (station.mac);
    }
 
-
    if (address == 0)
-      address = ip2DeviceID (clientIP);
+      address = ip2DeviceID (IPAddress ((uint8_t*)&clientIP));
       
    return address;
 }
+#endif
 
-static bool isMasterDevice (httpd_req_t *req)
+#if defined (ESP8266)
+uint64_t clientAddress (AsyncWebServerRequest *req)
+{
+   uint64_t address = 0;
+   u32_t clientIP = getClientIp (req);
+
+   struct station_info *station_list = wifi_softap_get_station_info();
+   while (station_list != NULL) 
+   {
+      if (clientIP == station_list->ip.addr)
+         address = mac2DeviceID (station_list->bssid);
+
+      station_list = STAILQ_NEXT(station_list, next);
+   }
+   wifi_softap_free_station_info();
+
+   if (address == 0)
+      address = ip2DeviceID (IPAddress ((uint8_t*)&clientIP));
+      
+   return address;
+}
+#endif
+
+static bool isMasterDevice (AsyncWebServerRequest *req)
 {
    // Serial.printf ("isMasterDevice\n");
    // Serial.printf ("  %lx",  mac2DeviceID (EEData.masterDevice));

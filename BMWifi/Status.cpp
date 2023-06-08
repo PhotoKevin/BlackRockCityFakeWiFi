@@ -4,7 +4,10 @@
 
 #if defined (ESP32)
    #include "WiFi.h"
-   #include <esp_https_server.h>
+   #include <ESPAsyncWebSrv.h>
+#elif defined (ESP8266)
+   #include <ESP8266WiFi.h>
+   #include <ESPAsyncWebSrv.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -63,7 +66,7 @@ String getSystemInformation (void)
    root["sdkVersion"] = ESP.getSdkVersion();
 //   root["bootVersion"] = ESP.getBootVersion();
 //   root["bootMode"] = ESP.getBootMode();
-   root["chipID"] = ESP.getChipModel();
+//   root["chipID"] = ESP.getChipModel();
    root["cpuFreq"] = ESP.getCpuFreqMHz();
 
 //   root["voltage"] = ESP.getVcc();
@@ -87,7 +90,7 @@ String getSystemInformation (void)
 }
 
 
-String getSettings (httpd_req_t *req)
+String getSettings (AsyncWebServerRequest *req)
 {
    String json = "";
 
@@ -109,7 +112,7 @@ String getSettings (httpd_req_t *req)
    snprintf (buffer, sizeof buffer, "%d.%d.%d.%d", EEData.netmask[0], EEData.netmask[1], EEData.netmask[2], EEData.netmask[3]);
    root["netmask"]         = buffer;
 
-   long long currentDeviceMac = clientAddress (req);
+   uint64_t currentDeviceMac = clientAddress (req);
    uint8_t *bytes = (uint8_t *) &currentDeviceMac;
    snprintf (buffer, sizeof buffer, "%02x:%02x:%02x:%02x:%02x:%02x", bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]);
    root["currentDevice"] = buffer;

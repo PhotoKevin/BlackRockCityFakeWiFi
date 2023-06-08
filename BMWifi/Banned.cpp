@@ -25,7 +25,7 @@ void expireBanned ()
    }
 }
 
-int banExpires (long long address)
+int banExpires (uint64_t address)
 {
    time_t currentTime = time (NULL);
    for (int i=0; i<NUM_BANNED; i++)
@@ -42,7 +42,7 @@ int banExpires (long long address)
    return 0;
 }
 
-void banDevice (long long address)
+void banDevice (uint64_t address)
 {
    Serial.printf ("Banning %llx\n", address);
    time_t currentTime = time (NULL);
@@ -59,7 +59,7 @@ void banDevice (long long address)
    /* If there were no empty slots, they get a free pass */
 }
 
-int isBanned (long long address)
+int isBanned (uint64_t address)
 {
    expireBanned ();
    for (int i=0; i<NUM_BANNED; i++)

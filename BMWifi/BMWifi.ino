@@ -1,6 +1,6 @@
 //#define NOT_AP    // Define for debugging as just a device on the network
 
-#if defined (ARDUINO_heltec_wifi_kit_32)
+#if defined (ARDUINO_heltec_wifi_kit_32) || defined (ARDUINO_wifi_kit_8)
    #define USE_LCD_DISPLAY
 #endif   
 
@@ -12,8 +12,12 @@
 #if defined (ESP32)
    #include <WiFi.h>
    #include <ESPmDNS.h>
-   #include <esp_https_server.h>
-
+   #include <ESPAsyncWebSrv.h>
+#elif defined (ESP8266)
+   #include <ESP8266WiFi.h>
+   #include <ESP8266mDNS.h>
+   #include <ESPAsyncTCP.h>
+   #include <ESPAsyncWebSrv.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -31,14 +35,17 @@ char lastPageReq[512];
 // #include <SPI.h>
 // #endif
 
+
+#if defined (ARDUINO_wifi_kit_8)
 // Heltec WiFi Kit 8
-//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 
 
+#elif defined (ARDUINO_heltec_wifi_kit_32)
 // Heltec WiFi Kit 32
 U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 //U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ 16);
-
+#endif
 #endif
 
 //https://android.googlesource.com/platform/frameworks/base/+/c80f952/core/java/android/net/CaptivePortalTracker.java
@@ -56,11 +63,8 @@ bool clockSet = false;
 IPAddress apIP(10,47,4,7);
 IPAddress netMsk(255,255,255,0);
 
-
-#if defined (ESP32)
-   httpd_handle_t secure_http = NULL;
-   httpd_handle_t insecure_http = NULL;
-#endif
+AsyncWebServer server(80);
+AsyncEventSource events("/events");
 
 const byte DNS_PORT = 53;
 
@@ -83,8 +87,15 @@ void setup (void)
 {
    RestartRequired = 0;
    Serial.begin (115200);                           // full speed to monitor
+   delay(200);
+   Serial.println ("\n\n\n");
+   Serial.print ("SDK Version: ");
+   Serial.println (ESP.getSdkVersion());
 
+
+   memset (lastPageReq, 0, sizeof lastPageReq);
 #if defined (USE_LCD_DISPLAY)
+   Serial.println ("Setting up LCD");
    u8x8.begin();
    u8x8.setPowerSave(0);
  
@@ -117,12 +128,15 @@ void setup (void)
       EEChanged = 1;
    }
 
-   Serial.println (getSystemInformation ());
    #if defined (NOT_AP)
       ConnectToNetwork ();
    #else
       SetupAP ();
    #endif
+
+   Serial.print ("SDK Version: ");
+   Serial.println (ESP.getSdkVersion());
+   Serial.println (getSystemInformation ());
 
 #if !defined (NOT_AP)
 
@@ -136,28 +150,25 @@ void setup (void)
       // Add service to MDNS-SD
       MDNS.addService ("http", "tcp", 80);
 //      MDNS.addService ("https", "tcp", 443);
-#endif
    }
-
+#endif
 
    setupWebServer ();
 
-   yield ();
 }
 
 /// Setup the ESP32 as an Access Point
 
 void SetupAP (void)
 {
-   int rc;
-   WiFi.disconnect (true, true);
+//   WiFi.disconnect (true, true);
    WiFi.mode (WIFI_AP);
 
    apIP = IPAddress (EEData.ipAddress);
    netMsk = IPAddress (EEData.netmask);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
-   rc = WiFi.softAP (EEData.SSID); // No password, this is an open access point
+   WiFi.softAP (EEData.SSID); // No password, this is an open access point
 
    Serial.print ("AP is ");
    Serial.println (WiFi.softAPIP ().toString());
@@ -255,15 +266,15 @@ void DisplayOLEDStatus (void)
          u8x8.drawString (0, 1, buffer);
       #endif
 
-      #if defined (ESP8266)
-         snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
-         Serial.println (buffer);
-         yield ();
-         #if defined (USE_LCD_DISPLAY)
-            pad (buffer, sizeof buffer);
-            u8x8.drawString (0, 2, buffer);
-         #endif
-      #endif
+      // #if defined (ESP8266)
+      //    snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
+      //    Serial.println (buffer);
+      //    yield ();
+      //    #if defined (USE_LCD_DISPLAY)
+      //       pad (buffer, sizeof buffer);
+      //       u8x8.drawString (0, 2, buffer);
+      //    #endif
+      // #endif
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
@@ -290,18 +301,10 @@ void DisplayOLEDStatus (void)
 
 void loop (void)
 {
-   static unsigned long prevHeap = 4000000;
-//   DisplayOLEDStatus ();
+//   static unsigned long prevHeap = 4000000;
+   DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
-   
-   static UBaseType_t prevHighWater = 1000000;
-   UBaseType_t highWater = uxTaskGetStackHighWaterMark (NULL);
-   if (highWater < prevHighWater)
-   {
-      Serial.printf ("High water: %lu\n", highWater);
-      prevHighWater = highWater;
-      yield ();
-   }
+  
 
    if (RestartRequired)
    {

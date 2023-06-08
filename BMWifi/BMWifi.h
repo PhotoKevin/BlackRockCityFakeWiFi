@@ -2,7 +2,7 @@
 
 struct banned_t
 {
-   long long address;
+   uint64_t address;
    time_t timestamp;
 };
 
@@ -56,11 +56,10 @@ extern const char settings_html[];
 extern const char settings_js[];
 extern const char login_html[];
 
-#if defined (_ESP_HTTP_SERVER_H_)
-   extern httpd_handle_t insecure_http;
-   long long clientAddress (httpd_req_t *req);
-   bool isLoggedIn (httpd_req_t *req);
-   String getSettings (httpd_req_t *req);
+#if defined (_ESPAsyncWebSrv_H_)
+   uint64_t clientAddress (AsyncWebServerRequest *req);
+   bool isLoggedIn (AsyncWebServerRequest *req);
+   String getSettings (AsyncWebServerRequest *req);
 #endif
 
 String  WiFiStatus (int s);
@@ -82,12 +81,15 @@ String getSystemInformation (void);
 String getTitle (void);
 void strtrim (char *str);
 
-bool Login (String user, String pw, long long device);
+bool Login (String user, String pw, uint64_t device);
 
 void expireBanned (void);
-int banExpires (long long address);
-void banDevice (long long address);
-int isBanned (long long address);
-void handleBlocked (void) ;
+int banExpires (uint64_t address);
+void banDevice (uint64_t address);
+int isBanned (uint64_t address);
 
+
+// Visitors.cpp
+int hasVisited (uint64_t deviceId);
+void visited  (uint64_t deviceId);
 

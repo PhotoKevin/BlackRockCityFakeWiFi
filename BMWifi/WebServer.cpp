@@ -5,10 +5,13 @@
 
 #if defined (ESP32)
    #include <WiFi.h>
-   #include <lwip/sockets.h>
+   #include <ESPAsyncWebSrv.h>
 
-   #include <esp_http_server.h>
-
+#elif defined (ESP8266)
+   #include <ESP8266WiFi.h>
+   #include <ESP8266mDNS.h>
+   #include <ESPAsyncTCP.h>
+   #include <ESPAsyncWebSrv.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -17,81 +20,42 @@
 
 #include "BMWifi.h"
 
-static char *getHeader (httpd_req_t *req, const char *headername, char *header, size_t headersize)
+
+//typedef int esp_err_t;
+
+
+static char *getHeader (AsyncWebServerRequest *req, const char *headername, char *header, size_t headersize)
 {
    header[0] = '\0';
-   size_t buf_len = httpd_req_get_hdr_value_len (req, headername) + 1;
-   if (buf_len > 1) 
+   if (req->hasHeader (headername))
    {
-      char *buf = (char *) malloc (buf_len);
-      if (buf != NULL)
-      {
-         if (httpd_req_get_hdr_value_str (req, headername, buf, buf_len) == ESP_OK) 
-         {
-            strncpy (header, buf, headersize);
-            header[headersize-1] = '\0';
-         }
-         free (buf);
-      }
+      AsyncWebHeader *hdr = req->getHeader (headername);
+
+      strncpy (header, hdr->value().c_str(), headersize);
+      header[headersize-1] = '\0';
+      strtrim (header);
    }
 
-   strtrim (header);
    return header;
 }
 
-static char *getUserAgent (httpd_req_t *req, char *agent, size_t agentsize)
+static char *getUserAgent (AsyncWebServerRequest *req, char *agent, size_t agentsize)
 {
    return getHeader (req, "User-Agent", agent, agentsize);
 }
 
 
-static char *getHost (httpd_req_t *req, char *hostname, size_t hostsize)
+static char *getHost (AsyncWebServerRequest *req, char *hostname, size_t hostsize)
 {
-   char *rc = getHeader (req, "Host", hostname, hostsize);
-   size_t len = strlen (hostname);
-
-   return rc;
+   return getHeader (req, "Host", hostname, hostsize);
 }
 
 
-static char *getArgString (httpd_req_t *req)
+static void setLastPageRequested (AsyncWebServerRequest *req)
 {
-   char *buf = NULL;
-
-   int rc;
-   if (req->content_len > 1)
-   {
-      Serial.printf ("getArgString from content: %d bytes\n", req->content_len);
-      buf = (char *) malloc (req->content_len+1);
-      if (buf != NULL)
-      {
-         rc = httpd_req_recv (req, buf, req->content_len);
-         Serial.printf ("httpd_req_recv -> %d\n", rc);         
-         if (rc > 0)
-            buf[rc] = '\0';
-      }
-   }
-   else
-   {
-      size_t buf_len = httpd_req_get_url_query_len(req);
-      Serial.printf ("getArgString from url: %d bytes\n", buf_len);
-
-      if (buf_len > 1) 
-      {
-         buf = (char *) malloc(buf_len+1);
-         if (buf != NULL)
-         {
-            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
-               buf[buf_len] = '\0';
-         }
-      }
-   }
-
-   if (buf != NULL)
-      Serial.printf ("Arg String: %s\n", buf);
-   return buf;
+   char host[60];
+   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->url ().c_str());
 }
-
 
 void strtrim (char *str)
 {
@@ -160,6 +124,7 @@ void setClock (const char *timestamp)
       int year, month, day;
       int hour, minute, second;
 
+      Serial.printf ("setClock (\"%s\")\n", timestamp);
       int n = sscanf (timestamp, "%04d-0%02d-%02dT%02d:%02d:%02d", &year, &month, &day, &hour, &minute, &second);
       if (n == 6)
       {
@@ -185,12 +150,11 @@ void setClock (const char *timestamp)
    }
 }
 
-static bool allowSend (httpd_req_t *req, String page)
+static bool allowSend (AsyncWebServerRequest *req, String page)
 {
    bool rc = false;
 
    bool banned = isBanned (clientAddress(req));
-   yield ();
 
    if (! banned)
       rc = true;
@@ -206,118 +170,102 @@ static bool allowSend (httpd_req_t *req, String page)
 }
 
 
-static void sendHeaders (httpd_req_t *req)
+static void sendHeaders (AsyncWebServerRequest *req)
 {
    // httpd_resp_set_hdr (req, "Cache-Control", "no-cache, no-store, must-revalidate");
    // httpd_resp_set_hdr (req, "Pragma", "no-cache");
    // httpd_resp_set_hdr (req, "Expires", "-1");
 }
 
-static void sendHtml (httpd_req_t *req, const char *txt)
+static void sendHtml (AsyncWebServerRequest *req, const char *txt)
 {
-   char host[512]; 
-   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
+   setLastPageRequested (req);
 
-   IPAddress clientIP = IPAddress (); // server.client().remoteIP();
-   bool allowed = allowSend (req, req->uri);
+   IPAddress clientIP = req->client()->remoteIP();
+   bool allowed = allowSend (req, req->url());
 
    Serial.printf ("SendHtml %s -> %s (%s)\n", lastPageReq, clientIP.toString ().c_str (), allowed ? "allowed" : "not allowed");
    sendHeaders (req);
-   httpd_resp_set_type (req, "text/html");
 
    if (allowed)
-      httpd_resp_sendstr (req, txt);
+      req->send (200, "text/html", txt);
    else
-      httpd_resp_sendstr (req, banned_html);
+      req->send (200, "text/html", banned_html);
 }
 
-static void sendJs (httpd_req_t *req, const char *txt)
+static void sendJs (AsyncWebServerRequest *req, const char *txt)
 {
-   char host[512];
-   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
+   setLastPageRequested (req);
+
    Serial.printf ("SendJs %s\n", lastPageReq);
 
    sendHeaders (req);
-   httpd_resp_set_type (req, "application/javascript");
-   httpd_resp_send (req , txt, strlen (txt));
-
-   yield ();
+   req->send (200, "application/javascript", txt);
 }
 
-static void sendCss (httpd_req_t *req, const char *txt)
+static void sendCss (AsyncWebServerRequest *req, const char *txt)
 {
-   char host[200];
-   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
+   setLastPageRequested (req);
    Serial.printf ("SendCss %s\n", lastPageReq);
 
    sendHeaders (req);
-   httpd_resp_set_type (req, "text/css");
-   httpd_resp_sendstr (req, txt);
-
-   yield ();
+   req->send (200, "text/css", txt);
 }
 
-static int  send302 (httpd_req_t *req, const char *page)
+static int  send302 (AsyncWebServerRequest *req, const char *page)
 {
-   char location[1024];
-   char host[60];
-   snprintf (lastPageReq, sizeof lastPageReq, "http://%s%s", getHost (req, host, sizeof host), req->uri);
+   char location[200];
 
+   setLastPageRequested (req);
    snprintf (location, sizeof location, "http://%s/%s", localIP (), page);
-
    Serial.printf ("send302 -> %s\n", location);
-//   sendHeaders (req);
+// //   sendHeaders (req);
 
-   httpd_resp_set_hdr (req, "X-Frame-Options", "deny" );
-   httpd_resp_set_hdr (req, "Cache-Control", "no-cache" );
-   httpd_resp_set_hdr (req, "Pragma", "no-cache" );
-   httpd_resp_set_hdr (req, "Location", location);
-   httpd_resp_set_status (req, "307");
-   httpd_resp_set_type (req, "text/html");
-   httpd_resp_sendstr (req, redirect_html);
-   Serial.println ("302 sent");
+//    httpd_resp_set_hdr (req, "X-Frame-Options", "deny" );
+//    httpd_resp_set_hdr (req, "Cache-Control", "no-cache" );
+//    httpd_resp_set_hdr (req, "Pragma", "no-cache" );
+//    httpd_resp_set_hdr (req, "Location", location);
 
-   return ESP_OK;
+//   req->send (307, "text/html", redirect_html);
+   req->redirect (location);
+   return 0;
 }
 
-static esp_err_t  handleRestrictedPage (httpd_req_t *req, const char *requestedPage)
+static void  handleRestrictedPage (AsyncWebServerRequest *req, const char *requestedPage)
 {
    Serial.printf ("handleRestrictedPage\n");
    if (isLoggedIn (req))
       sendHtml (req, requestedPage);
    else
    {
-      return send302 (req, "login.html");
+      send302 (req, "login.html");
    }
-   
-   return ESP_OK;
 }
 
+static void handleBanned (AsyncWebServerRequest *req)      {Serial.println ("handleBanned"); sendHtml (req, banned_html);}
 
-static esp_err_t handleBanned (httpd_req_t *req)      {sendHtml (req, banned_html); return ESP_OK;}
-static esp_err_t handleRadioCSS (httpd_req_t *req)    {sendCss (req, radio2_css); return ESP_OK;}
-static esp_err_t handlebrccss (httpd_req_t *req)      {sendCss (req, brc_css); return ESP_OK;}
-static esp_err_t handleCheckboxCSS (httpd_req_t *req) {sendCss (req, checkbox_css); return ESP_OK;}
+static void handleRadioCSS (AsyncWebServerRequest *req)    {sendCss (req, radio2_css);}
+static void handlebrccss (AsyncWebServerRequest *req)      {sendCss (req, brc_css);}
+static void handleCheckboxCSS (AsyncWebServerRequest *req) {sendCss (req, checkbox_css);}
 
-static esp_err_t handlequestionsjs (httpd_req_t *req) {sendJs (req, questions_js); return ESP_OK;}
-static esp_err_t handleBannedJs (httpd_req_t *req)    {sendJs (req, banned_js); return ESP_OK;}
-static esp_err_t handleBMWifiJs (httpd_req_t *req)    {sendJs (req, bmwifi_js); return ESP_OK;}
-static esp_err_t handleDebugData (httpd_req_t *req)   {sendJs (req, debugdata_js); return ESP_OK;}
-static esp_err_t handleStatusJs (httpd_req_t *req)    {sendJs (req, status_js); return ESP_OK;}
-static esp_err_t handleSettingsJs (httpd_req_t *req)  {sendJs (req, settings_js); return ESP_OK;}
-static esp_err_t handleStatus (httpd_req_t *req)      {handleRestrictedPage (req, status_html); return ESP_OK;}
-static esp_err_t handleSettings (httpd_req_t *req)    {return handleRestrictedPage (req, settings_html);}
+static void handlequestionsjs (AsyncWebServerRequest *req) {sendJs (req, questions_js);}
+static void handleBannedJs (AsyncWebServerRequest *req)    {sendJs (req, banned_js);}
+static void handleBMWifiJs (AsyncWebServerRequest *req)    {sendJs (req, bmwifi_js);}
+static void handleDebugData (AsyncWebServerRequest *req)   {sendJs (req, debugdata_js);}
+static void handleStatusJs (AsyncWebServerRequest *req)    {sendJs (req, status_js);}
+static void handleSettingsJs (AsyncWebServerRequest *req)  {sendJs (req, settings_js);}
+static void handleStatus (AsyncWebServerRequest *req)      {handleRestrictedPage (req, status_html);}
+static void handleSettings (AsyncWebServerRequest *req)    {return handleRestrictedPage (req, settings_html);}
 
-static esp_err_t handleLegal (httpd_req_t *req)       
+static void handleLegal (AsyncWebServerRequest *req)       
 {
    Serial.println ("handleLegal");
    char agent[200];
-
+	
    String userAgent = getUserAgent (req, agent, sizeof agent);
-   Serial.printf ("userAgent is %s\n", agent);
+   uint64_t client = clientAddress (req);
 
-   yield ();
-   if (! isLoggedIn (req))
+   if (! isLoggedIn (req) && !hasVisited (client) && strcmp (req->url ().c_str (), "/legal.html") == 0)
    {
       if (userAgent.indexOf ("Android") >= 0)
          EEData.androidCount++;
@@ -325,49 +273,41 @@ static esp_err_t handleLegal (httpd_req_t *req)
          EEData.iPhoneCount++;
       
       EEData.legalShown += 1;
+      visited (client);
    }
 
    if (clockSet)
       EEData.lastActivity = time (NULL);
    EEChanged = 1;
    sendHtml (req, legal_html);
-
-   return ESP_OK;
 }
 
-static esp_err_t handleLogin (httpd_req_t *req)
+static void getPostParameter (AsyncWebServerRequest *req, const char *name, char *value, size_t valsize)
 {
-   char *argumentBuffer;
+   value[0] = '\0';
+   AsyncWebParameter *parameter = req->getParam (name, true, false);
+   if (parameter != nullptr)
+      strncpy (value, parameter->value().c_str(), valsize);
+   value[valsize-1] = '\0';
+}
+
+static void handleLogin (AsyncWebServerRequest *req)
+{
    char username[50];
    char password[50];
    char timestamp[50];
 
-   username[0] = '\0';
-   password[0] = '\0';
-   timestamp[0] = '\0';
-
-
    Serial.println ("handleLogin");
-   argumentBuffer = getArgString (req);
-   if (argumentBuffer != NULL)
-   {
-      Serial.printf ("getting args %s\n", argumentBuffer);
-      if (httpd_query_key_value (argumentBuffer, "username", username, sizeof username) != ESP_OK)
-         username[0] = '\0';
 
-      if (httpd_query_key_value (argumentBuffer, "password", password, sizeof password) != ESP_OK)
-         password[0] = '\0';
+   getPostParameter (req, "username", username, sizeof username);
+   getPostParameter (req, "password", password, sizeof password);
+   getPostParameter (req, "timeStamp", timestamp, sizeof timestamp);
 
-      if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
-         timestamp[0] = '\0';
-      free (argumentBuffer);
+   urldecode (username, username);
+   urldecode (password, password);
+   urldecode (timestamp, timestamp);
 
-      urldecode (username, username);
-      urldecode (password, password);
-      urldecode (timestamp, timestamp);
-
-      Serial.printf ("user: %s; pass:%s; time:%s", username, password, timestamp);
-   }
+   Serial.printf ("user: %s; pass:%s; time:%s", username, password, timestamp);
 
    bool loggedin = false;
    if (username[0] != '\0' && password[0] != '\0')
@@ -378,57 +318,38 @@ static esp_err_t handleLogin (httpd_req_t *req)
 
    if (loggedin)
    {
-      return send302 (req, "status.html");
+      send302 (req, "status.html");
    }
    else
       sendHtml (req, login_html);
 
    Serial.printf ("Returning OK from handlLogin\n");
-   return ESP_OK;
 }
 
-static esp_err_t handleQuestion (httpd_req_t *req)    
+static void handleQuestion (AsyncWebServerRequest *req)    
 {
-   char *argumentBuffer;
    char timestamp[50];
    timestamp[0] = '\0';
 
    Serial.printf ("handleQuestion\n");
-   argumentBuffer = getArgString (req);
-   if (argumentBuffer != NULL)
-   {
-      if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
-         timestamp[0] = '\0';
-      free (argumentBuffer);
-
-      urldecode (timestamp, timestamp);
-   }
-
+   getPostParameter (req, "timeStamp", timestamp, sizeof timestamp);
+   urldecode (timestamp, timestamp);
    setClock (timestamp);
    sendHtml (req, question_html);
    Serial.printf ("Leave handleQuestion");
-   return ESP_OK;
 }
 
 
-static esp_err_t handleJsonRequest (httpd_req_t *req) 
+static void handleJsonRequest (AsyncWebServerRequest *req) 
 {
    Serial.println ("handleJsonRequest");
 
-   char *argumentBuffer;
-   char request[200];
-   char timestamp[200];
-   argumentBuffer = getArgString (req);
-   if (argumentBuffer != NULL)
-   {
-      if (httpd_query_key_value (argumentBuffer, "request", request, sizeof request) != ESP_OK)
-         request[0] = '\0';
+   char request[200] = "";
+   char timestamp[200] = "";
 
-      if (httpd_query_key_value (argumentBuffer, "timestamp", timestamp, sizeof timestamp) != ESP_OK)
-         timestamp[0] = '\0';
+   getPostParameter (req, "request", request, sizeof request);
+   getPostParameter (req, "timeStamp", timestamp, sizeof timestamp);
 
-      free (argumentBuffer);
-   }
    urldecode (request, request);
    urldecode (timestamp, timestamp);   
    if (!clockSet)
@@ -442,7 +363,7 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
    else if (strcmp (request, "expire") == 0)
    {
       char json[44];
-      long long device = clientAddress (req);
+      uint64_t device = clientAddress (req);
       int expires = banExpires (device);
 
       snprintf (json, sizeof json, "{\"expire\" : \"%d\"}", expires);
@@ -470,6 +391,7 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
          EEData.androidCount = 0;
          EEData.iPhoneCount = 0;
          EEData.lastActivity = time (NULL);
+         EEChanged = 1;
       }
    }
    else if (strcmp (request, "") == 0)
@@ -478,8 +400,6 @@ static esp_err_t handleJsonRequest (httpd_req_t *req)
       Serial.printf ("Unknown AJAX request: %s\n", request);
 
    Serial.printf ("   Ajax request complete\n");
-   
-   return ESP_OK;
 }
 
 
@@ -504,9 +424,8 @@ static void parseAddress (uint8_t *addressBytes, const char *address, int base)
    }
 }
 
-esp_err_t handleSettingsPost (httpd_req_t *req)
+void handleSettingsPost (AsyncWebServerRequest *req)
 {
-   char *argumentBuffer;
    char ssid[100];
    char username[50];
    char password[50];
@@ -516,33 +435,14 @@ esp_err_t handleSettingsPost (httpd_req_t *req)
    char netmask[50];
    char playSound[10];
 
-   argumentBuffer = getArgString (req);
-   if (argumentBuffer != NULL)
-   {
-      Serial.printf ("AgrBuf: %s\n", argumentBuffer);
-
-      if (httpd_query_key_value (argumentBuffer, "ssid", ssid, sizeof ssid) != ESP_OK)
-         ssid[0] = '\0';
-
-      if (httpd_query_key_value (argumentBuffer, "username", username, sizeof username) != ESP_OK)
-         username[0] = '\0';
-
-      if (httpd_query_key_value (argumentBuffer, "password", password, sizeof password) != ESP_OK)
-         password[0] = '\0';
-
-      if (httpd_query_key_value (argumentBuffer, "hostname", hostname, sizeof hostname) != ESP_OK)
-         hostname[0] = '\0';
-      if (httpd_query_key_value (argumentBuffer, "masterDevice", masterDevice, sizeof masterDevice) != ESP_OK)
-         masterDevice[0] = '\0';
-      if (httpd_query_key_value (argumentBuffer, "ipAddress", ipAddress, sizeof ipAddress) != ESP_OK)
-         ipAddress[0] = '\0';
-      if (httpd_query_key_value (argumentBuffer, "netmask", netmask, sizeof netmask) != ESP_OK)
-         netmask[0] = '\0';
-      if (httpd_query_key_value (argumentBuffer, "playSound", playSound, sizeof playSound) != ESP_OK)
-         playSound[0] = '\0';
-
-      free (argumentBuffer);
-   }
+   getPostParameter (req, "ssid", ssid, sizeof ssid);
+   getPostParameter (req, "username", username, sizeof username);
+   getPostParameter (req, "password", password, sizeof password); 
+   getPostParameter (req, "hostname", hostname, sizeof hostname);
+   getPostParameter (req, "masterDevice", masterDevice, sizeof masterDevice);
+   getPostParameter (req, "ipAddress", ipAddress, sizeof ipAddress);
+   getPostParameter (req, "netmask", netmask, sizeof netmask);
+   getPostParameter (req, "playSound", playSound, sizeof playSound);
 
    urldecode (ssid, ssid);
    urldecode (username, username);
@@ -584,53 +484,53 @@ esp_err_t handleSettingsPost (httpd_req_t *req)
       RestartRequired = 1;
    }
 
-   return handleSettings (req);
+   handleSettings (req);
 }
 
-static esp_err_t handleBlocked (httpd_req_t *req) 
+void handleBlocked (AsyncWebServerRequest *req) 
 {
-   long long device = clientAddress (req);
+   Serial.println ("handleBlocked");
+   uint64_t device = clientAddress (req);
    sendHtml (req, blocked_html); 
 
-   if (!isLoggedIn (req))
-      EEData.totalBanned += 1;
-      
-   if (clockSet)
-      EEData.lastActivity = time (NULL);
-   EEChanged = 1;
+   if (!isBanned (device) && !isLoggedIn (req))
+   {
+      if (clockSet)
+         EEData.lastActivity = time (NULL);
 
-   banDevice (device);
-   if (isBanned (device))
+      banDevice (device);
       Serial.printf ("Device %llx is Banned\n", device);
 
-   return ESP_OK;
+      EEData.totalBanned += 1;
+      Serial.printf ("Banned: %d\n", EEData.totalBanned);
+      EEChanged = 1;      
+   }
 }
 
 
 
-esp_err_t handlePortalCheck (httpd_req_t *req) 
+void handlePortalCheck (AsyncWebServerRequest *req) 
 {
    char host[59];   
    getHost (req, host, sizeof host);
+   setLastPageRequested (req);
 
-   Serial.printf ("   handlePortalCheck: http://%s%s\n", host, req->uri);
+   Serial.printf ("   handlePortalCheck: %s\n", lastPageReq);
    if (isLoggedIn (req))
    {
-      return send302 (req, "status.html");
+      send302 (req, "status.html");
    }
    else
    {
-      Serial.printf ("   Redirect http://%s%s to captive portal\n", host, req->uri);
-      return send302 (req, "legal.html");
+      Serial.printf ("   Redirect %s to captive portal\n", lastPageReq);
+      send302 (req, "legal.html");
    }
 }
 
-static esp_err_t notFound (httpd_req_t *req, httpd_err_code_t error_code)
+static void notFound (AsyncWebServerRequest *req)
 {
+   setLastPageRequested (req);
    char host[512];
-
-   getHost (req, host, sizeof host);
-   Serial.printf ("Not found: http://%s%s\n", host, req->uri);
 
    char ipAddress[50];
    snprintf (ipAddress, sizeof ipAddress, "%d.%d.%d.%d", EEData.ipAddress[0], EEData.ipAddress[1], EEData.ipAddress[2], EEData.ipAddress[3]);
@@ -638,86 +538,47 @@ static esp_err_t notFound (httpd_req_t *req, httpd_err_code_t error_code)
    if ((strcmp (host, EEData.hostname) == 0) || (strcmp (host, ipAddress) == 0))
    {
       Serial.printf ("   Send 404\n");
-      httpd_resp_send_404 (req);
+      req->send(404, "text/plain", "Not found");
    }
    else
       handlePortalCheck (req);
-
-   return ESP_OK;
 }
 
-void server_on (const char *uri, httpd_method_t method, esp_err_t (*handler)(httpd_req_t *r))
-{
-   httpd_uri_t index_uri = 
-   {
-      .uri = uri,
-      .method = method,
-      .handler = handler,
-      .user_ctx = NULL
-   };
-
-   if (insecure_http != NULL)
-   {
-      int rc = httpd_register_uri_handler (insecure_http, &index_uri);
-      if (rc != 0)
-         Serial.printf ("insecure httpd_register_uri_handler FAILED: %d\n", rc);
-   }
-}
-
+extern AsyncWebServer server;
+extern AsyncEventSource events;
 
 void setupWebServer (void)
 {
-   httpd_config insecure_config;
-   memset (&insecure_config, 0, sizeof insecure_config);
+   Serial.println ("Server(s) started, registering handlers");
 
+   server.onNotFound (notFound);
 
-   insecure_config = HTTPD_DEFAULT_CONFIG ();
-   insecure_config.max_uri_handlers   = 25;
-   insecure_config.ctrl_port          = 32769;
-   int rc = ESP_OK + 1;
+   server.on ("/bmwifi.js", HTTP_GET, handleBMWifiJs);
+   server.on ("/", HTTP_GET, handleLegal);
+   server.on ("/checkbox.css", HTTP_GET,  handleCheckboxCSS);
+   server.on ("/question.html", HTTP_GET,  handleQuestion);
+   server.on ("/question.html", HTTP_POST,  handleQuestion);
+   server.on ("/legal.html", HTTP_GET,  handleLegal);
+   server.on ("/banned.html", HTTP_GET,  handleBanned);
+   server.on ("/banned.js", HTTP_GET,  handleBannedJs);
+   server.on ("/blocked.html", HTTP_GET,  handleBlocked);
+   server.on ("/debugdata.js", HTTP_GET,  handleDebugData);
+   server.on ("/brc.css", HTTP_GET,  handlebrccss);
+   server.on ("/getJson", HTTP_POST,  handleJsonRequest);
+   server.on ("/questions.js", HTTP_GET,  handlequestionsjs);
+   server.on ("/radio2.css", HTTP_GET,  handleRadioCSS);
+   //server_on ("/favicon.ico", HTTP_GET, notFound);
+   server.on ("/status", HTTP_GET, handleStatus);
+   server.on ("/status.html", HTTP_GET, handleStatus);
+   server.on ("/status.js", HTTP_GET, handleStatusJs);
 
-   rc = httpd_start (&insecure_http, &insecure_config);
-   if (rc != ESP_OK)
-      Serial.printf ("Error %d starting insecure_http\n", rc);
+   server.on ("/settings.html", HTTP_GET, handleSettings);
+//      server_on ("/settings.html", HTTP_POST, handleSettingsPost);
+   server.on ("/settings.js", HTTP_GET, handleSettingsJs);
 
+   server.on ("/login.html", HTTP_GET, handleLogin);
+   server.on ("/login.html", HTTP_POST, handleLogin);
 
-   if (rc == ESP_OK)
-   {
-      Serial.println ("Server(s) started, registering handlers");
-
-      if (insecure_http != NULL)
-         httpd_register_err_handler (insecure_http, HTTPD_404_NOT_FOUND, notFound);
-
-      for (int i=0; i<HTTPD_ERR_CODE_MAX; i++)
-         httpd_register_err_handler (insecure_http, (httpd_err_code_t) i, notFound);
-
-      server_on ("/bmwifi.js", HTTP_GET, handleBMWifiJs);
-      server_on ("/", HTTP_GET, handleLegal);
-      server_on ("/checkbox.css", HTTP_GET,  handleCheckboxCSS);
-      server_on ("/question.html", HTTP_GET,  handleQuestion);
-      server_on ("/question.html", HTTP_POST,  handleQuestion);
-      server_on ("/legal.html", HTTP_GET,  handleLegal);
-      server_on ("/banned.html", HTTP_GET,  handleBanned);
-      server_on ("/banned.js", HTTP_GET,  handleBannedJs);
-      server_on ("/blocked.html", HTTP_GET,  handleBlocked);
-      server_on ("/debugdata.js", HTTP_GET,  handleDebugData);
-      server_on ("/brc.css", HTTP_GET,  handlebrccss);
-      server_on ("/getJson", HTTP_POST,  handleJsonRequest);
-      server_on ("/questions.js", HTTP_GET,  handlequestionsjs);
-      server_on ("/radio2.css", HTTP_GET,  handleRadioCSS);
-      //server_on ("/favicon.ico", HTTP_GET, notFound);
-      server_on ("/status", HTTP_GET, handleStatus);
-      server_on ("/status.html", HTTP_GET, handleStatus);
-      server_on ("/status.js", HTTP_GET, handleStatusJs);
-
-      server_on ("/settings.html", HTTP_GET, handleSettings);
-      server_on ("/settings.html", HTTP_POST, handleSettingsPost);
-      server_on ("/settings.js", HTTP_GET, handleSettingsJs);
-
-      server_on ("/login.html", HTTP_GET, handleLogin);
-      server_on ("/login.html", HTTP_POST, handleLogin);
-   }
-   yield ();
-
+   server.begin ();
    Serial.printf ("Webserver setup complete\n");
 }
