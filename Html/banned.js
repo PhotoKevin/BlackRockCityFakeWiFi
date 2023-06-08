@@ -1,17 +1,17 @@
-   const xhr = new XMLHttpRequest();
+   const xhrBanned = new XMLHttpRequest();
 
    function expirationHandler ()
    {
-      if (xhr.readyState === XMLHttpRequest.DONE)
+      if (xhrBanned.readyState === XMLHttpRequest.DONE)
       {
-         if (xhr.status === 200)
+         if (xhrBanned.status === 200)
          {
-            let data = JSON.parse (xhr.responseText);
+            let data = JSON.parse (xhrBanned.responseText);
             expire.innerHTML = data.expire;
          }
          else
          {
-            //alert('There was a problem with the request: ' + xhr.status);
+            //alert('There was a problem with the request: ' + xhrBanned.status);
          }
       }
    }
@@ -24,9 +24,9 @@
       var formData = new URLSearchParams ();
       formData.append ("request", "expire");
 
-      xhr.open ('POST', url, true);
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      xhr.onreadystatechange = expirationHandler;
-      xhr.send (formData);
+      xhrBanned.open ('POST', url, true);
+      xhrBanned.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhrBanned.onreadystatechange = expirationHandler;
+      xhrBanned.send (formData);
    }
 
