@@ -7,13 +7,15 @@ Finally they get told that "Dorking around on the Internet" is against the princ
 
 
 ## Development Environment
-I developed this on both a Heltec WiFi Kit 32 and some generic ESP32 Devkit using the Arduino IDE, but it should work on any generic ESP-32 board that is supported by Arduino. The Heltec board is nice in that it has a built in display and can run
+I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the LCD display on a Heltec WiFi Kit 32 or WiFi Kit 8. and some generic ESP32 Devkit. The Heltec boards are nice in that they have a built in display and can run
 off of either USB or a LiPo battery and can charge the battery from USB. 
 
 The web pages were created with the [Atom](https://atom.io) editor. A small C program is then used to convert the
 pages into data stored in the main flash memory. The C program was developed in Visual Studio 2019.
 
-[WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)
+[WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)  
+[WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)  
+[Wemos D1](https://www.wemos.cc/en/latest/d1/index.html)
 
 
 ## Captive Portal
@@ -24,22 +26,27 @@ implement this.
 
 
 ## Building the project
-I'm using the Arduino 2.0 IDE. It's still in beta (2022-06) but has been working well.
+I'm using the Arduino 2.1.0 IDE.
 
-- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URL of 
+- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URLs of 
 https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
 
 - Exit and restart the IDE.
 
-- In the Boards Manager (left column, second icon from the top) find "esp32 by Espressif Systems" and install it. You need at least version 2.04
+- In the Boards Manager (left column, second icon from the top) find "esp32 by Espressif Systems" and install it. You need at least version 2.09
+- If you're using an ESP8266, find and install "ESP8266 Boards". I'm using version 3.0.2
 
-- Now go to the Library Manager (left column, third icon from the top) and install "ArduionJson by Benoit Blanchon".
-If you are using the WiFi Kit 32 board with an LCD display, you will also want to install "U8g2 by oliver"
+- Now go to the Library Manager (left column, third icon from the top) and install
+    - ArduionJson by Benoit Blanchon.
+    - AsyncTCP by dvarrel
+    - ESPAsyncTCP by dvarrel
+    - ESPAsyncWebSrv by dvarrel
+    - If you are using the WiFi Kit 32 board with an LCD display, you will also want to install "U8g2 by oliver"
 
 - Plug your ESP board into a USB port.
 
-- Click on the drop down in the button bar. Find "Generic ESP32 Dev Module" and click it. Also select the COM port for the board.
+- Click on the drop down in the button bar. Select your board and COM port.
 
 - Lastly click on the Upload (right arrow) button to compile and install the software.
 
@@ -61,7 +68,7 @@ You can now make your changes.
 - SSID - Name of the Access Point that shows up on your phone.
 - Username - Username for accessing the statistics and settings.
 - Password - Password for same. If left blank the previous password will remain in effect. 
-- IP Address - The IP Address for the Access Point.
+- IP Address - The IP Address for the Access Point. Note: Changing this affects the address used to access the configuration page.
 - Netmask - The Netmask for the Access Point. You almost certainly should not change this.
 - Master Device - The MAC address of a master device (aka your phone) that will be automatically logged in and sent to the status page.
 - Current Device - The MAC address of the device you're currently using. Displayed so you can copy it into the Master Device if you want.
