@@ -13,8 +13,10 @@ input[type="radio"]
 
    border: 0.15em solid currentColor;
    transition: 0.2s all linear;
-   position: relative;
-   top: 0.1em;
+   position: top;
+   top: 0.0em;
+   vertical-align: middle;
+   margin: 0px;
 }
 
 input[type="radio"]:checked 

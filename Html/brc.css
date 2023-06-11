@@ -65,12 +65,13 @@ body
 {
    background: #a9a395;
    border: 0.15em solid currentColor;
-   padding: .1em;
+   padding: .25em;
    margin-top: .75em;
+   margin-bottom: .75em;
    margin-left: 5%;
    margin-right: 5%;
    font-size: 1.75em;
-   /* align: center; */
+   align: center;
 }
 
 input
