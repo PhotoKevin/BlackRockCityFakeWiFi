@@ -136,26 +136,26 @@ void main (int argc, char *argv[])
    {
       { "include", required_argument, NULL, 'i' },
       { "output", required_argument, NULL, 'o' },
-	   { NULL, 	0,			NULL, 		0 }
+      { NULL, 0, NULL, 0 }
    };
 
    int ch;
    while ((ch = getopt_long(argc, argv, "o:", longopts, NULL)) != -1)
    {
-   	switch (ch) 
+      switch (ch) 
       {
-   	case 'o':
+      case 'o':
          outputfile = optarg;
-		   break;
+         break;
 
       case 'i':
          includefile = optarg;
          break;
 
-   	default:
-	   	usage();
-		   /* NOTREACHED */
-	   }
+      default:
+      usage();
+         /* NOTREACHED */
+      }
    }
    argc -= optind;
    argv += optind;
