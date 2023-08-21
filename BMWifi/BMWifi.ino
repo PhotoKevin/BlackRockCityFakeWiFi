@@ -18,6 +18,7 @@
    #include <ESP8266mDNS.h>
    #include <ESPAsyncTCP.h>
    #include <ESPAsyncWebSrv.h>
+   #include <ESP8266WiFiAP.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -157,6 +158,19 @@ void setup (void)
 
 }
 
+static int count = 0;
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+void dhcphandler (const DhcpServer& dhcp, DhcpServer::OptionsBuffer& buff)
+{
+   static char tmp[200];
+
+   snprintf (tmp, sizeof tmp, "http://%d.%d.%d.%d/", EEData.ipAddress[0], EEData.ipAddress[1], EEData.ipAddress[2], EEData.ipAddress[3]);
+   count += 1;
+   buff.add ((uint8_t) 114, tmp, strlen (tmp));
+   buff.add ((uint8_t) 160, tmp, strlen (tmp));
+   Serial.println ("Inside the handler");
+}
+
 /// Setup the ESP32 as an Access Point
 
 void SetupAP (void)
@@ -165,13 +179,22 @@ void SetupAP (void)
    WiFi.mode (WIFI_AP);
 
    apIP = IPAddress (EEData.ipAddress);
-   netMsk = IPAddress (EEData.netmask);
+//   netMsk = IPAddress (EEData.netmask);
 
    WiFi.softAPConfig (apIP, apIP, netMsk);
    WiFi.softAP (EEData.SSID); // No password, this is an open access point
 
    Serial.print ("AP is ");
    Serial.println (WiFi.softAPIP ().toString());
+
+   DhcpServer& xx = WiFi.softAPDhcpServer();
+   xx.onSendOptions (dhcphandler);
+//   WiFi.softAPDhcpServer().onSendOptions (dhcphandler);
+
+
+//https://docs.espressif.com/projects/esp8266-rtos-sdk/en/latest/api-reference/tcpip/tcpip_adapter.html?highlight=dhcp#_CPPv426tcpip_adapter_dhcps_option27tcpip_adapter_option_mode_t25tcpip_adapter_option_id_tPv8uint32_t
+
+//https://github.com/esp8266/Arduino/issues/1956
 
    // Set up a DNS server. 
    dnsServer.setErrorReplyCode (DNSReplyCode::NoError);
@@ -298,12 +321,16 @@ void DisplayOLEDStatus (void)
    #endif
 }
 
-
+static int prevcount = 0;
 void loop (void)
 {
 //   static unsigned long prevHeap = 4000000;
    DisplayOLEDStatus ();
    SaveEEDataIfNeeded (EEDataAddr, &EEData, sizeof EEData);
+   if (prevcount != count)
+      Serial.printf ("Count: %d\n", count);
+      prevcount = count;
+
   
 
    if (RestartRequired)
