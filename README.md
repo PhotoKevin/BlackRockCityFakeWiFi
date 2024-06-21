@@ -60,7 +60,7 @@ This sounds more complicated than it really is. The overall flow is to connect t
 At this point you will get a typical pop up saying you need to log into the access point. 
 - Ignoring the login prompt, open your browser and try to open a page such as Bing or Google. The access point will capture that request and send you to a giant page of legalese. 
 - Look at the address bar. It should say something like http://10.47.4.7/legal.html. Change that be login.html leaving the rest of it alone (e.g. http://10.47.4.7/login.html)
-- Now you'll have a username/login prompt page. The default credentials are admin/***REMOVED*** (both are all lower case). Entering those will bring up the status page. 
+- Now you'll have a username/login prompt page. The default credentials are admin/changeme (both are all lower case). Entering those will bring up the status page. 
 - Lastly click the Settings button at the bottom of the page.
 You can now make your changes.
 
