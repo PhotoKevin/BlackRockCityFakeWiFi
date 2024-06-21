@@ -9,32 +9,73 @@
    <script src="bmwifi.js"></script>
    <script src="questions.js"></script>
    <style>
+      .body 
+      {
+         font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+      }
       .lic1
       {
          margin: 0em 0em 0.5em;
          font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
          line-height: 1em;
       }
-
-      .licsmall
+      
+      .lichead1
       {
          font-size: 0.9em;
+         margin: 0em 0em 0.5em;
          line-height: 1em;
-         font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
       }
 
-      .lic18px
+      .lichead2
       {
+         font-size: 0.7em;
+         margin: 0em 0em 0.5em;
          line-height: 1em;
-         font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
       }
 
-      .liclist
+      .lichead3
+      {
+         font-size: 0.5em;
+         margin: 0em 0em 0.5em;
+         line-height: 1em;
+      }
+
+      .licbody1
+      {
+         font-size: 0.8em;
+         margin: 0em 0em 0.5em;
+         line-height: 1em;
+      }
+
+      .licbody2
+      {
+         font-size: 0.6em;
+         margin: 0em 0em 0.5em;
+         line-height: 1em;
+      }
+
+      .licbody3
+      {
+         font-size: 0.4em;
+         margin: 0em 0em 0.5em;
+         line-height: 1em;
+      }
+
+      .liclist2
       {
          padding: 0em;
-         margin: 0em 0px 0.5em 2em;
-         font-size: 0.5em;
-         font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+         padding-bottom: 1em;
+         margin: 0em 0em 0.3em 2em;
+         font-size: 0.4em;
+      }
+
+      .liclist3
+      {
+         padding: 0em;
+         padding-bottom: 1em;
+         margin: 0em 0px 0.3em 2em;
+         font-size: 0.4em;
       }
 
       .submit
@@ -58,24 +99,27 @@
    </script>
 </head>
 
-<body onload="myOnload()">
+<body onload="myOnload()" class="body">
    <div class="top centerHorizontal" id="top"></div>
    <div class="main centerHorizontal" id="main">
       <div dir="ltr">
          <p class="lic1">
-            <small class="licsmall"><b>Terms and Conditions</b></small>
+            <small class="lichead1"><b>Terms and Conditions</b></small>
          </p>
-         <p class="licsmall">By using our internet service, you hereby assert that you
+         <div class="licbody1">
+         <p>By using our internet service, you hereby assert that you
             you are a burner and conduct yourself according to the ten priciples. You also acknowledge, expressly acknowledge, and agree that
             there are significant security, privacy and confidentiality risks inherent in accessing or transmitting information through the internet, whether the connection is facilitated through wired or wireless technology. Security issues include,
             without limitation, interception of transmissions, loss of data, and the introduction or viruses and other programs that can corrupt or damage your computer.</p>
-         <p class="licsmall">Accordingly, you agree that the owner and/or provider of this network is NOT liable for any interception or transmissions, computer worms or viruses, loss of data, file corruption, hacking or damage to your computer or
+         <p>Accordingly, you agree that the owner and/or provider of this network is NOT liable for any interception or transmissions, computer worms or viruses, loss of data, file corruption, hacking or damage to your computer or
             other devices that result from the transmission or download of information or materials through the internet service provided.</p>
-         <p class="licsmall">Use of the wireless network is subject to the general restrictions outlined below. If abnormal, illegal, or unauthorized behavior is detected, including heavy consumption of bandwidth, the network provider reserves the
+         <p>Use of the wireless network is subject to the general restrictions outlined below. If abnormal, illegal, or unauthorized behavior is detected, including heavy consumption of bandwidth, the network provider reserves the
             right to permanently disconnect the offending device from the wireless network.</p>
-         <p class="licsmall"><b>Examples of Illegal Uses</b></p>
-         <p class="licsmall">The following are representative examples only and do not comprise a comprehensive list of <a class="licsmall" href="login.html">illegal</a> uses:</p>
-         <ol class="liclist lic18px">
+         </div>
+         <p class="lichead2"><b>Examples of Illegal Uses</b></p>
+         <p class="licbody2">The following are representative examples only and do not comprise a comprehensive list of 
+           <a href="login.html">illegal</a> uses:</p>
+         <ol class="liclist2">
             <li>Spamming and invasion of privacy - Sending of unsolicited bulk and/or commercial messages over the Internet using the Service or using the Service for activities that invade another's privacy.</li>
             <li>Intellectual property right violations - Engaging in any activity that infringes or misappropriates the intellectual property rights of others, including patents, copyrights, trademarks, service marks, trade secrets, or any other
                proprietary right of any third party.</li>
@@ -88,9 +132,9 @@
             <li>Uttering threats;</li>
             <li>Distribution of pornographic materials to minors; and Child pornography.</li>
          </ol>
-         <p class="licsmall"><b>Examples of Unacceptable Uses</b></p>
-         <p class="licsmall">The following are representative examples only and do not comprise a comprehensive list of unacceptable uses:</p>
-         <ol class="liclist lic18px">
+         <p class="lichead3"><b>Examples of Unacceptable Uses</b></p>
+         <p class="licbody3">The following are representative examples only and do not comprise a comprehensive list of unacceptable uses:</p>
+         <ol class="liclist3">
             <li>High bandwidth operations, such as large file transfers and media sharing with peer-to-peer programs (i.e.torrents)</li>
             <li>Obscene or indecent speech or materials</li>
 
