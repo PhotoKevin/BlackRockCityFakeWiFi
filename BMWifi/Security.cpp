@@ -5,6 +5,8 @@
 
 #if defined (ESP32)
    #include <ESPAsyncWebSrv.h>
+   #include "esp_wifi.h"
+   #include "esp_wifi_ap_get_sta_list.h"
 #elif defined (ESP8266)
    #include <ESPAsyncWebSrv.h>
 #else
@@ -153,16 +155,17 @@ uint64_t clientAddress (AsyncWebServerRequest *req)
    long clientIP = getClientIp (req);
 
    wifi_sta_list_t wifi_sta_list;
-   tcpip_adapter_sta_list_t adapter_sta_list;
+   wifi_sta_mac_ip_list_t adapter_sta_list;
    
    memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
-	memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
+   memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-   tcpip_adapter_get_sta_list (&wifi_sta_list, &adapter_sta_list);
+   esp_wifi_ap_get_sta_list(&wifi_sta_list);
+   esp_wifi_ap_get_sta_list_with_ip(&wifi_sta_list, &adapter_sta_list);
    
    for (int i = 0; i < adapter_sta_list.num; i++) 
    {
-   	tcpip_adapter_sta_info_t station = adapter_sta_list.sta[i];
+   	esp_netif_pair_mac_ip_t station = adapter_sta_list.sta[i];
 //    Serial.printf("%d - mac: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x - IP: \n", i,
 //		station.mac[0], station.mac[1], station.mac[2],
 //		station.mac[3], station.mac[4], station.mac[5]);
@@ -177,9 +180,8 @@ uint64_t clientAddress (AsyncWebServerRequest *req)
       
    return address;
 }
-#endif
 
-#if defined (ESP8266)
+#elif defined (ESP8266)
 uint64_t clientAddress (AsyncWebServerRequest *req)
 {
    uint64_t address = 0;

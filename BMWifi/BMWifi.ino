@@ -1,8 +1,8 @@
 //#define NOT_AP    // Define for debugging as just a device on the network
 
-#if defined (ARDUINO_heltec_wifi_kit_32) || defined (ARDUINO_wifi_kit_8)
+#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8)
    #define USE_LCD_DISPLAY
-#endif   
+#endif
 
 #include <DNSServer.h>
 #include <Wire.h>
@@ -41,7 +41,7 @@ char lastPageReq[512];
 U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
 
 
-#elif defined (ARDUINO_heltec_wifi_kit_32)
+#elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
 // Heltec WiFi Kit 32
 U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 //U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ 16);
@@ -86,8 +86,9 @@ int RestartRequired = 0;
 void setup (void)
 {
    RestartRequired = 0;
+//   Serial.begin (9600);                           // full speed to monitor
    Serial.begin (115200);                           // full speed to monitor
-   delay(200);
+   delay(2000);
    Serial.println ("\n\n\n");
    Serial.print ("SDK Version: ");
    Serial.println (ESP.getSdkVersion());
