@@ -40,11 +40,11 @@ https://espressif.github.io/arduino-esp32/package_esp32_index.json
     - "ESP8266 Boards" version 3.1.2
 
 - Now go to the Library Manager (left column, third icon from the top) and install
-    - ArduionJson by Benoit Blanchon.
-    - AsyncTCP by dvarrel
-    - ESPAsyncTCP by dvarrel
-    - ESPAsyncWebSrv by dvarrel
-    - If you are using one of the Heltec boards with an LCD display, you will also want to install "U8g2 by oliver"
+    - ArduionJson by Benoit Blanchon. 7.0.4
+    - ESPAsyncWebSrv by dvarrel 1.2.7
+    - AsyncTCP by dvarrel - Will be auto installed by above
+    - ESPAsyncTCP by dvarrel - Will be auto installed by above
+    - U8g2 by oliver. 2.34.22 - If using one of the Heltec boards
 
 - Plug your ESP board into a USB port.
 
@@ -60,12 +60,13 @@ like:
     - &lt;path>\ESPAsyncWebSrv\src\AsyncEventSource.cpp:188:7: error: 'ets_printf' was not declared in this scope; did you mean 'vswprintf'?
 
 - To fix this add the following to the top of those files:  
->    #define  mbedtls_md5_starts_ret mbedtls_md5_starts <br>
-    #define mbedtls_md5_update_ret mbedtls_md5_update  <br>
+>   #define ets_printf log_e  <br>
     #define mbedtls_md5_finish_ret mbedtls_md5_finish  <br>
-    #define ets_printf log_e  <br>
-    #define mbedtls_sha1_update_ret mbedtls_sha1_update  <br>
+    #define mbedtls_md5_starts_ret mbedtls_md5_starts <br>
+    #define mbedtls_md5_update_ret mbedtls_md5_update  <br>
     #define mbedtls_sha1_finish_ret  mbedtls_sha1_finish  <br>
+    #define mbedtls_sha1_starts_ret mbedtls_sha1_starts <br>
+    #define mbedtls_sha1_update_ret mbedtls_sha1_update  <br>
 
 
 ## Accessing the Status and Configuration Pages
