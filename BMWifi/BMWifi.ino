@@ -278,7 +278,7 @@ void DisplayOLEDStatus (void)
       //    #endif
       // #endif
 
-      strftime (buffer, sizeof buffer, "%y-%m-%d %H:%S", gmtime (&EEData.lastActivity));
+      strftime (buffer, sizeof buffer, "%y-%m-%d %H:%M", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
       yield ();
       #if defined (USE_LCD_DISPLAY)

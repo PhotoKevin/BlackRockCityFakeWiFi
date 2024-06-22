@@ -70,7 +70,7 @@ String getSystemInformation (void)
    root["legalShown"]      = EEData.legalShown;
    root["legalAccepted"]   = EEData.legalAccepted;
 
-   strftime (buffer, sizeof buffer, "%FT%T", gmtime (&now));
+   strftime (buffer, sizeof buffer, "%F %T", gmtime (&now));
    root["lastActivity"]    = buffer;
    root["androidCount"]    = EEData.androidCount;
    root["iPhoneCount"]     = EEData.iPhoneCount;
