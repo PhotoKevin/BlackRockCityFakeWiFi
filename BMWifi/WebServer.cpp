@@ -435,6 +435,7 @@ void handleSettingsPost (AsyncWebServerRequest *req)
    char netmask[50];
    char playSound[10];
 
+   Serial.println ("handleSettingsPost");
    getPostParameter (req, "ssid", ssid, sizeof ssid);
    getPostParameter (req, "username", username, sizeof username);
    getPostParameter (req, "password", password, sizeof password); 
@@ -452,7 +453,6 @@ void handleSettingsPost (AsyncWebServerRequest *req)
    urldecode (ipAddress, ipAddress);
    urldecode (netmask, netmask);
 
-   Serial.println ("handleSettingsPost");
    if (isLoggedIn (req))
    {
       Serial.println ("  make changes");
@@ -573,7 +573,7 @@ void setupWebServer (void)
    server.on ("/status.js", HTTP_GET, handleStatusJs);
 
    server.on ("/settings.html", HTTP_GET, handleSettings);
-//      server_on ("/settings.html", HTTP_POST, handleSettingsPost);
+   server.on ("/settings.html", HTTP_POST, handleSettingsPost);
    server.on ("/settings.js", HTTP_GET, handleSettingsJs);
 
    server.on ("/login.html", HTTP_GET, handleLogin);

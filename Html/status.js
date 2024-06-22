@@ -1,6 +1,6 @@
 {
-var questionSet;
-var currentStatus;
+   var questionSet;
+   var currentStatus;
 
    const xhr = new XMLHttpRequest();
    function ajaxHandler ()
@@ -54,8 +54,11 @@ var currentStatus;
 
       setElementInnerText ("sdkVersion", currentStatus.sdkVersion);
       setElementInnerText ("bootVersion", currentStatus.bootVersion);
+      setElementInnerText ("chip", currentStatus.chip);
+      setElementInnerText ("cores", currentStatus.cores);
       setElementInnerText ("chipID", currentStatus.chipID);
       setElementInnerText ("cpuFreq", currentStatus.cpuFreq);
+      setElementInnerText ("revision", currentStatus.revision);
       setElementInnerText ("voltage", currentStatus.voltage);
       setElementInnerText ("memoryFree", currentStatus.memoryFree);
       setElementInnerText ("sketchSize", currentStatus.sketchSize);

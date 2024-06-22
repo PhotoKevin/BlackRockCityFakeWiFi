@@ -50,4 +50,12 @@
       setElementValue ("username", currentSettings.username);
       setElementValue  ("currentDevice", currentSettings.currentDevice);
    }
+
+
+   function setAsMaster ()
+   {
+      let id = document.getElementById ("currentDevice");
+      if (id != null)
+        setElementValue ("masterDevice", id.value);
+   }
 }

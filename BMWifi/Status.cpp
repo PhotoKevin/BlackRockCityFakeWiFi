@@ -2,9 +2,13 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
+
 #if defined (ESP32)
    #include "WiFi.h"
    #include <ESPAsyncWebSrv.h>
+   #include <esp_system.h>
+   #include "esp_chip_info.h"
+
 #elif defined (ESP8266)
    #include <ESP8266WiFi.h>
    #include <ESPAsyncWebSrv.h>
@@ -17,13 +21,32 @@
 
 #include "BMWifi.h"
 
+
+#if defined (ESP32)
+String getChipModel (esp_chip_model_t chip)
+{
+   switch (chip)
+   {
+   case CHIP_ESP32: return "ESP32";
+   case CHIP_ESP32S2: return "ESP32S2";
+   case CHIP_ESP32S3: return "ESP32S3";
+   case CHIP_ESP32C3: return "ESP32C3";
+   case CHIP_ESP32C2: return "ESP32C2";
+   case CHIP_ESP32C6: return "ESP32C6";
+   case CHIP_ESP32H2: return "ESP32H2";
+   case CHIP_POSIX_LINUX: return "Linus";
+   default: return "Unknown chip";
+   }
+}
+#endif
+
+
 String getTitle (void)
 {
 
    String json = "";
 
-   const int capacity = JSON_OBJECT_SIZE(2);
-   StaticJsonDocument<capacity> root;
+   JsonDocument root;
 
    root["title"]            = EEData.SSID;
    serializeJson (root, json);
@@ -36,8 +59,7 @@ String getSystemInformation (void)
 {
    String json = "";
 
-   const int capacity = JSON_OBJECT_SIZE(32);
-   StaticJsonDocument<capacity> root;
+   JsonDocument root;
 
    char buffer[32];
    time_t now;
@@ -84,18 +106,26 @@ String getSystemInformation (void)
    
    root["station_mac"] = WiFi.macAddress();
    root["station_ip"] = WiFi.localIP().toString();
-   serializeJson (root, json);
 
+   #if defined (ESP32)
+      esp_chip_info_t chip;
+      esp_chip_info (&chip);
+      char s[22];
+      snprintf (s, sizeof s, "%d.%02d", chip.revision/100, chip.revision%100);
+      root["chip"] = getChipModel (chip.model);
+      root["revision"] =  s;
+      root["cores"] = chip.cores;
+   #endif
+
+   serializeJson (root, json);
    return json;
 }
-
 
 String getSettings (AsyncWebServerRequest *req)
 {
    String json = "";
 
-   const int capacity = JSON_OBJECT_SIZE(32);
-   StaticJsonDocument<capacity> root;
+   JsonDocument root;
 
    char buffer[32];
 

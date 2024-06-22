@@ -8,7 +8,6 @@
 #include <Wire.h>
 #include <EEPROM.h>
 #include <Ticker.h>
-
 #if defined (ESP32)
    #include <WiFi.h>
    #include <ESPmDNS.h>
@@ -54,9 +53,9 @@ U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/
 // You need to supply your own Secret.h defining 
 //#define NETWORK_SSID "<SSID>"      
 //#define NETWORK_PASS "<password>"  
-//#if defined (NOT_AP)
-#include "Secret.h"
-//#endif
+#if defined (NOT_AP)
+   #include "Secret.h"
+#endif
 
 bool clockSet = false;
 
@@ -92,6 +91,7 @@ void setup (void)
    Serial.println ("\n\n\n");
    Serial.print ("SDK Version: ");
    Serial.println (ESP.getSdkVersion());
+
 
 
    memset (lastPageReq, 0, sizeof lastPageReq);
@@ -308,6 +308,9 @@ void loop (void)
 
    if (RestartRequired)
    {
+      if (EEChanged)
+         WriteEEData (EEDataAddr, &EEData, sizeof EEData);
+
       ESP.restart ();
       while (1)
          ;
@@ -390,6 +393,8 @@ String  WiFiStatus (int s)
    case WL_CONNECTION_LOST: return "Connection Lost";   // 5
    #if defined (ESP8266)
       case WL_WRONG_PASSWORD: return "Wrong Password";     // 6
+   #else
+      case WL_STOPPED: return "Stopped";                   // 254
    #endif
    case WL_DISCONNECTED: return "Disconnected";         // 7
    default: return "Unknown status";                    //

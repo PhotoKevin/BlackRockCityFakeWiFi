@@ -160,8 +160,8 @@ uint64_t clientAddress (AsyncWebServerRequest *req)
    memset(&wifi_sta_list, 0, sizeof(wifi_sta_list));
    memset(&adapter_sta_list, 0, sizeof(adapter_sta_list));
 
-   esp_wifi_ap_get_sta_list(&wifi_sta_list);
-   esp_wifi_ap_get_sta_list_with_ip(&wifi_sta_list, &adapter_sta_list);
+   esp_wifi_ap_get_sta_list (&wifi_sta_list);
+   esp_wifi_ap_get_sta_list_with_ip (&wifi_sta_list, &adapter_sta_list);
    
    for (int i = 0; i < adapter_sta_list.num; i++) 
    {

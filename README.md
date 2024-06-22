@@ -1,16 +1,16 @@
 # BlackRockCityFakeWiFi
 
 ## Purpose
-Create a joke WiFi access point for Black Rock City (aka Burning Man). The person trying to use the access point gets a huge page of Terms and Conditions. Once they agree, they are run through several sets of questions to "Prove they're not a robot". 
+Create a joke WiFi access point for Black Rock City (aka Burning Man). The person trying to use the access point gets a huge page of Terms and Conditions. Once they agree, they are run through several sets of questions to "Prove they're not a robot".
 
 Finally they get told that "Dorking around on the Internet" is against the principle of Immediacy and are dumped.
 
 
 ## Development Environment
 I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the LCD display on a Heltec WiFi Kit 32 or WiFi Kit 8. and some generic ESP32 Devkit. The Heltec boards are nice in that they have a built in display and can run
-off of either USB or a LiPo battery and can charge the battery from USB. 
+off of either USB or a LiPo battery and can charge the battery from USB.
 
-The web pages were created with the [Atom](https://atom.io) editor. A small C program is then used to convert the
+The web pages were created with the [Pulsar](https://pulsar-edit.dev) editor. A small C program is then used to convert the
 pages into data stored in the main flash memory. The C program was developed in Visual Studio 2019.
 
 [WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)  
@@ -20,29 +20,31 @@ pages into data stored in the main flash memory. The C program was developed in 
 
 ## Captive Portal
 The code implements a Captive Portal which operates like the typical free WiFi you'd find at a resturant.
-When the user connects it grabs all traffic from that user regardless of what they asked for and redirects it 
-to its signon process. I owe a lot to the [Mobile Rick Roll](https://github.com/idolpx/mobile-rr) project for their work in figuring out how to 
+When the user connects it grabs all traffic from that user regardless of what they asked for and redirects it
+to its signon process. I owe a lot to the [Mobile Rick Roll](https://github.com/idolpx/mobile-rr) project for their work in figuring out how to
 implement this.
 
 
 ## Building the project
-I'm using the Arduino 2.1.0 IDE.
+I'm using the Arduino 2.3.2 IDE.
 
-- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URLs of 
-https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-
+- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URLs of
+https://arduino.esp8266.com/stable/package_esp8266com_index.json  
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
 
 - Exit and restart the IDE.
 
-- In the Boards Manager (left column, second icon from the top) find "esp32 by Espressif Systems" and install it. You need at least version 2.09
-- If you're using an ESP8266, find and install "ESP8266 Boards". I'm using version 3.0.2
+- In the Boards Manager (left column, second icon from the top) and install
+    - "esp32 by Espressif Systems" version 3.0.1
+    - "Arduino ESP32 Boards" version 2.0.13
+    - "ESP8266 Boards" version 3.1.2
 
 - Now go to the Library Manager (left column, third icon from the top) and install
     - ArduionJson by Benoit Blanchon.
     - AsyncTCP by dvarrel
     - ESPAsyncTCP by dvarrel
     - ESPAsyncWebSrv by dvarrel
-    - If you are using the WiFi Kit 32 board with an LCD display, you will also want to install "U8g2 by oliver"
+    - If you are using one of the Heltec boards with an LCD display, you will also want to install "U8g2 by oliver"
 
 - Plug your ESP board into a USB port.
 
@@ -50,28 +52,47 @@ https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32
 
 - Lastly click on the Upload (right arrow) button to compile and install the software.
 
-## Accessing the Configuration Page
-This sounds more complicated than it really is. The overall flow is to connect to the access point, then go to a hidden login page. Then go to the settings.
+- As of June 2024, the ESPAsyncWebSrv (1.2.4) is not compatible with other current libraries and will give errors
+like:
 
-- Plug the Ardunio board into power and get out your phone.
+    - &lt;path>\WebAuthentication.cpp:74:3: error: 'mbedtls_md5_starts_ret' was not declared in this scope; did you mean 'mbedtls_md5_starts'?
+    - &lt;path>\AsyncWebSocket.cpp:551:7: error: 'ets_printf' was not declared in this scope; did you mean 'vswprintf'?
+    - &lt;path>\ESPAsyncWebSrv\src\AsyncEventSource.cpp:188:7: error: 'ets_printf' was not declared in this scope; did you mean 'vswprintf'?
 
-- Disable data access.
-- Find the access point and connect to it.
-At this point you will get a typical pop up saying you need to log into the access point. 
-- Ignoring the login prompt, open your browser and try to open a page such as Bing or Google. The access point will capture that request and send you to a giant page of legalese. 
-- Look at the address bar. It should say something like http://10.47.4.7/legal.html. Change that be login.html leaving the rest of it alone (e.g. http://10.47.4.7/login.html)
-- Now you'll have a username/login prompt page. The default credentials are admin/changeme (both are all lower case). Entering those will bring up the status page. 
-- Lastly click the Settings button at the bottom of the page.
-You can now make your changes.
+- To fix this add the following to the top of those files:  
+>    #define  mbedtls_md5_starts_ret mbedtls_md5_starts <br>
+    #define mbedtls_md5_update_ret mbedtls_md5_update  <br>
+    #define mbedtls_md5_finish_ret mbedtls_md5_finish  <br>
+    #define ets_printf log_e  <br>
+    #define mbedtls_sha1_update_ret mbedtls_sha1_update  <br>
+    #define mbedtls_sha1_finish_ret  mbedtls_sha1_finish  <br>
+
+
+## Accessing the Status and Configuration Pages
+- Bring up the list of access points and find BRC Open WiFi.
+- Select that and you should be redirected to the giant page of legalese.
+- Find the sentence "The following are representative examples only and do not comprise a comprehensive list of illegal</a> uses:"
+- Click on the word "illegal".
+- Log in with the default credentials of admin/changeme (both are all lower case).
+
 
 ## Configuration Options
 - SSID - Name of the Access Point that shows up on your phone.
 - Username - Username for accessing the statistics and settings.
-- Password - Password for same. If left blank the previous password will remain in effect. 
+- Password - Password for same. If left blank the previous password will remain in effect.
 - IP Address - The IP Address for the Access Point. Note: Changing this affects the address used to access the configuration page.
 - Netmask - The Netmask for the Access Point. You almost certainly should not change this.
 - Master Device - The MAC address of a master device (aka your phone) that will be automatically logged in and sent to the status page.
 - Current Device - The MAC address of the device you're currently using. Displayed so you can copy it into the Master Device if you want.
 
+Changing the settings will cause the ESP to reboot.
 
+# Modifying the HTML pages
 
+The html directory contains all of the HTML, CSS, JavaScript, etc. It has to be converted into
+a cpp file with strings. This can be done with the HtmlHelper program. You have to build the HtmlHelper with Visual Studio, or some other C compiler. Then run it as follows to put it into a C file
+
+> HtmlHelper.exe --output=webpages.cpp --include=BMWiFi.h blocked.html brc.css checkbox.css legal.html question.html questions.js questions.json debugdata.js radio2.css banned.html banned.js redirect.html status.html status.js bmwifi.js settings.html settings.js login.html
+
+Move the resulting webpages.cpp file over to the BMWiFi directory.
+> move *.cpp ..\BMWiFi

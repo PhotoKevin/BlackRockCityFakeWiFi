@@ -32,8 +32,10 @@ currentStatus =
    "androidCount" : 2,
    "sdkVersion" : "0",
    "bootVersion" : 0,
-   "chipID" : "0",
+   "chip" : "ESP32",
+   "revision" : "1.0",
    "cpuFreq" : 10,
+   "cores" : 1,
    "voltage" : 10,
    "memoryFree" : 0,
    "sketchSize" : 0,
@@ -51,5 +53,5 @@ currentSettings =
    "ipAddress" : "10.4.7.47",
    "netmask" : "255.255.255.0",
    "masterDevice" : "4A:2F:CF:B5:B6:58",
-   "currentDevice" : "00:00"
+   "currentDevice" : "01:02:03:04:05:06"
 }
