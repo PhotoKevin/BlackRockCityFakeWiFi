@@ -74,6 +74,7 @@ String getSystemInformation (void)
    root["lastActivity"]    = buffer;
    root["androidCount"]    = EEData.androidCount;
    root["iPhoneCount"]     = EEData.iPhoneCount;
+   root["unknownCount"]    = EEData.unknownCount;
    root["SSID"]            = EEData.SSID;
    root["hostname"]        = EEData.hostname;
 
@@ -106,6 +107,8 @@ String getSystemInformation (void)
    
    root["station_mac"] = WiFi.macAddress();
    root["station_ip"] = WiFi.localIP().toString();
+
+   root["lastUnknownUserAgent"] = String (EEData.lastUnknownUserAgent);
 
    #if defined (ESP32)
       esp_chip_info_t chip;

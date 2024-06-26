@@ -15,6 +15,7 @@ struct eeprom_data_t
    time_t lastActivity;
    int androidCount;
    int iPhoneCount;
+   int unknownCount;
    char SSID[33];    // IEEE 802.11 defines a max SSID of 32 bytes
    char hostname[33];
    char username[33];
@@ -23,6 +24,7 @@ struct eeprom_data_t
    uint8_t ipAddress[4];
    uint8_t netmask[4];
    uint8_t playSound;
+   char lastUnknownUserAgent[200];
 };
 
 extern char lastPageReq[512];
@@ -74,6 +76,7 @@ void SaveEEDataIfNeeded (int address, void *data, size_t nbytes);
 
 void client_status (void);
 const char *localIP (void);
+void str_copy (char *dest, const char *src, size_t len);
 
 //void dump (void *pkt, size_t len);
 

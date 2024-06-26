@@ -89,10 +89,6 @@ void setup (void)
    Serial.begin (115200);                           // full speed to monitor
    delay(2000);
    Serial.println ("\n\n\n");
-   Serial.print ("SDK Version: ");
-   Serial.println (ESP.getSdkVersion());
-
-
 
    memset (lastPageReq, 0, sizeof lastPageReq);
 #if defined (USE_LCD_DISPLAY)
@@ -114,10 +110,10 @@ void setup (void)
       uint8_t master[] = DEFAULT_MASTER;
       memset (&EEData, 0, sizeof EEData);
       EEData.eepromDataSize = sizeof EEData;
-      strncpy (EEData.SSID, DEFAULT_SSID, sizeof EEData.SSID);
-      strncpy (EEData.username, DEFAULT_ADMIN, sizeof EEData.username);
-      strncpy (EEData.password, DEFAULT_PASSWORD, sizeof EEData.password);
-      strncpy (EEData.hostname, DEFAULT_HOSTNAME, sizeof EEData.hostname);
+      str_copy (EEData.SSID, DEFAULT_SSID, sizeof EEData.SSID);
+      str_copy (EEData.username, DEFAULT_ADMIN, sizeof EEData.username);
+      str_copy (EEData.password, DEFAULT_PASSWORD, sizeof EEData.password);
+      str_copy (EEData.hostname, DEFAULT_HOSTNAME, sizeof EEData.hostname);
       for (int i=0; i<4; i++)
       {
          EEData.ipAddress[i] = ip[i];
@@ -289,7 +285,7 @@ void DisplayOLEDStatus (void)
 
    if (strncmp (lastPageReq, prevLastPageReq, sizeof prevLastPageReq) != 0)
    {
-      strncpy (prevLastPageReq, lastPageReq, sizeof prevLastPageReq);
+      str_copy (prevLastPageReq, lastPageReq, sizeof prevLastPageReq);
       Serial.print ("Last Page Requested: ");
       Serial.println (lastPageReq);
       yield ();
@@ -407,11 +403,19 @@ const char *localIP (void)
    if (localIPAddress[0] =='\0')
    {
       #if defined (NOT_AP)
-         strncpy (localIPAddress, WiFi.localIP().toString().c_str(), sizeof localIPAddress);
+         str_copy (localIPAddress, WiFi.localIP().toString().c_str(), sizeof localIPAddress);
       #else
-         strncpy (localIPAddress, WiFi.softAPIP().toString().c_str(), sizeof localIPAddress);
+         str_copy (localIPAddress, WiFi.softAPIP().toString().c_str(), sizeof localIPAddress);
       #endif
    }
 
    return localIPAddress;   
+}
+
+/// Copy the src string to the destination and insert a 
+/// trailing null if needed.
+void str_copy (char *dest, const char *src, size_t len)
+{
+   strncpy (dest, src, len);
+   dest[len-1] = '\0';
 }

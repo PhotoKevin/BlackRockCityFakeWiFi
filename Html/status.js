@@ -51,6 +51,8 @@
 
       setElementInnerText ("iPhoneCount", currentStatus.iPhoneCount);
       setElementInnerText ("androidCount", currentStatus.androidCount);
+      setElementInnerText ("unknownCount", currentStatus.unknownCount);
+      setElementInnerText ("lastUnknownUserAgent", currentStatus.lastUnknownUserAgent);
 
       setElementInnerText ("sdkVersion", currentStatus.sdkVersion);
       setElementInnerText ("bootVersion", currentStatus.bootVersion);

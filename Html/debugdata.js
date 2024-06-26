@@ -30,6 +30,7 @@ currentStatus =
    "lastActivity" : "1980-01-01",
    "iPhoneCount" : 1,
    "androidCount" : 2,
+   "unknownCount" : 0,
    "sdkVersion" : "0",
    "bootVersion" : 0,
    "chip" : "ESP32",

@@ -31,8 +31,7 @@ static char *getHeader (AsyncWebServerRequest *req, const char *headername, char
    {
       AsyncWebHeader *hdr = req->getHeader (headername);
 
-      strncpy (header, hdr->value().c_str(), headersize);
-      header[headersize-1] = '\0';
+      str_copy (header, hdr->value().c_str(), headersize);
       strtrim (header);
    }
 
@@ -271,6 +270,11 @@ static void handleLegal (AsyncWebServerRequest *req)
          EEData.androidCount++;
       else if (userAgent.indexOf ("iPhone") >= 0)
          EEData.iPhoneCount++;
+      else
+      {
+         str_copy (EEData.lastUnknownUserAgent, userAgent.c_str(), sizeof EEData.lastUnknownUserAgent);
+         EEData.unknownCount++;
+      }
       
       EEData.legalShown += 1;
       visited (client);
@@ -287,8 +291,7 @@ static void getPostParameter (AsyncWebServerRequest *req, const char *name, char
    value[0] = '\0';
    AsyncWebParameter *parameter = req->getParam (name, true, false);
    if (parameter != nullptr)
-      strncpy (value, parameter->value().c_str(), valsize);
-   value[valsize-1] = '\0';
+      str_copy (value, parameter->value().c_str(), valsize);
 }
 
 static void handleLogin (AsyncWebServerRequest *req)
@@ -390,6 +393,8 @@ static void handleJsonRequest (AsyncWebServerRequest *req)
          EEData.legalAccepted = 0;
          EEData.androidCount = 0;
          EEData.iPhoneCount = 0;
+         EEData.unknownCount = 0;
+         EEData.lastUnknownUserAgent[0] = '\0';
          EEData.lastActivity = time (NULL);
          EEChanged = 1;
       }
@@ -407,7 +412,7 @@ static void parseAddress (uint8_t *addressBytes, const char *address, int base)
 {
    char s[40];
 
-   strncpy (s, address, sizeof s);
+   str_copy (s, address, sizeof s);
    s[sizeof s - 1] = '\0';
 
    Serial.printf ("Parsing %s\n", s);
@@ -457,16 +462,16 @@ void handleSettingsPost (AsyncWebServerRequest *req)
    {
       Serial.println ("  make changes");
       if (strlen (ssid) > 0)
-         strncpy (EEData.SSID, ssid, sizeof EEData.SSID); 
+         str_copy (EEData.SSID, ssid, sizeof EEData.SSID); 
 
       if (strlen (username) > 0)
-         strncpy (EEData.username, username, sizeof EEData.username);
+         str_copy (EEData.username, username, sizeof EEData.username);
 
       if (strlen (password) > 0)
-         strncpy (EEData.password, password, sizeof EEData.password);
+         str_copy (EEData.password, password, sizeof EEData.password);
 
       if (strlen (hostname) > 0)
-         strncpy (EEData.hostname, hostname, sizeof EEData.hostname);
+         str_copy (EEData.hostname, hostname, sizeof EEData.hostname);
 
       if (strlen (masterDevice) > 0)
          parseAddress (EEData.masterDevice, masterDevice, 16);
