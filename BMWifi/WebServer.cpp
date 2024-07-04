@@ -270,6 +270,8 @@ static void handleLegal (AsyncWebServerRequest *req)
          EEData.androidCount++;
       else if (userAgent.indexOf ("iPhone") >= 0)
          EEData.iPhoneCount++;
+      else if (userAgent.indexOf ("wispr") >= 0)
+         EEData.iPhoneCount++;
       else
       {
          str_copy (EEData.lastUnknownUserAgent, userAgent.c_str(), sizeof EEData.lastUnknownUserAgent);
