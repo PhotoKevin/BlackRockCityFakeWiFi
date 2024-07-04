@@ -15,11 +15,12 @@ pages into data stored in the main flash memory. The C program was developed in 
 
 [WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)  
 [WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)  
-[Wemos D1](https://www.wemos.cc/en/latest/d1/index.html)
+[Wemos D1](https://www.wemos.cc/en/latest/d1/index.html)  
+[IdeaSpark ESP32](https://www.amazon.com/s?k=ideaspark)
 
 
 ## Captive Portal
-The code implements a Captive Portal which operates like the typical free WiFi you'd find at a resturant.
+The code implements a Captive Portal which operates like the typical free WiFi you'd find at a restaurant.
 When the user connects it grabs all traffic from that user regardless of what they asked for and redirects it
 to its signon process. I owe a lot to the [Mobile Rick Roll](https://github.com/idolpx/mobile-rr) project for their work in figuring out how to
 implement this.
@@ -31,6 +32,7 @@ I'm using the Arduino 2.3.2 IDE.
 - After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URLs of
 https://arduino.esp8266.com/stable/package_esp8266com_index.json  
 https://espressif.github.io/arduino-esp32/package_esp32_index.json
+https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/package_heltec_esp32_index.json
 
 - Exit and restart the IDE.
 

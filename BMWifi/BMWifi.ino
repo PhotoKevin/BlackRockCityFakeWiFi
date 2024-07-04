@@ -1,7 +1,10 @@
 //#define NOT_AP    // Define for debugging as just a device on the network
 
-#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8)
+//#define IDEA_SPARK // Define for IdeaSpark boards. Needed since they don't have their own board type.
+
+#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK)
    #define USE_LCD_DISPLAY
+   // #define USE_U8G2 // Define if you want to use the G2 version of the libraries. Pointless really. 
 #endif
 
 #include <DNSServer.h>
@@ -25,26 +28,36 @@ char lastPageReq[512];
 
 #include "Config.h"
 
-#if defined (USE_LCD_DISPLAY)
 // https://github.com/olikraus/u8g2
-#include <U8x8lib.h>
+#if defined (USE_LCD_DISPLAY)
+   #if defined (USE_U8G2)
+      #include <U8g2lib.h>
+   #else
+      #include <U8x8lib.h>
+   #endif
 
-// #define u8g2_HAVE_HW_SPI
-// #ifdef u8g2_HAVE_HW_SPI
-// #include <SPI.h>
-// #endif
+   #if defined (ARDUINO_wifi_kit_8)
+      // Heltec WiFi Kit 8
+      #if defined (USE_U8G2)
+         U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8x8(U8G2_R0, /* reset=*/ 16, U8X8_PIN_NONE, U8X8_PIN_NONE);
+      #else
+         U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+      #endif
 
 
-#if defined (ARDUINO_wifi_kit_8)
-// Heltec WiFi Kit 8
-U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
+   #elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
+      // Heltec WiFi Kit 32
+      U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+   
+   #elif defined (IDEA_SPARK)
+      #if defined (U8G2LIB_HH)
+         U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8x8 (U8G2_R0, 22, 21, U8X8_PIN_NONE);
+         #define drawString drawStr
+      #else
+         U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8 (22, 21, U8X8_PIN_NONE);
+      #endif
+   #endif
 
-
-#elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
-// Heltec WiFi Kit 32
-U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
-//U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ 16);
-#endif
 #endif
 
 //https://android.googlesource.com/platform/frameworks/base/+/c80f952/core/java/android/net/CaptivePortalTracker.java
@@ -95,8 +108,14 @@ void setup (void)
    Serial.println ("Setting up LCD");
    u8x8.begin();
    u8x8.setPowerSave(0);
- 
-   u8x8.setFont (u8x8_font_chroma48medium8_r);
+   //u8x8.setContrast (0x7f);
+   //u8x8.setDrawColor (0);
+   #if defined (U8G2LIB_HH)
+      u8x8.setFont (u8g2_font_chroma48medium8_8r);
+   #else
+      u8x8.setFont (u8x8_font_chroma48medium8_r);
+   #endif
+
 #endif
    Serial.print ("\nBMWifi Starting\n");
 
@@ -230,6 +249,17 @@ static void pad (char *str, size_t strsize)
 }
 #endif
 
+
+void drawString (int x, int y, const char *s)
+{
+   #if defined (U8G2LIB_HH)
+      u8x8.drawStr (8*x+8, 8*y+8, s);
+//      u8x8.sendBuffer ();
+   #else
+      u8x8.drawString (x, y, s);
+   #endif
+}
+
 // The OLED is 4 rows of 16 characters.
 // 0123456789012345
 // BRC WiFi
@@ -250,10 +280,13 @@ void DisplayOLEDStatus (void)
       prevRedirects = EEData.legalShown;
       prevBanned = EEData.totalBanned;
       prevActivity = EEData.lastActivity;
+      // #if defined (U8G2LIB_HH)
+      //    u8x8.setDrawColor (1);
+      // #endif
 
       char buffer[17];
       #if defined (USE_LCD_DISPLAY)
-         u8x8.drawString (0, 0, EEData.hostname);
+         drawString (0, 0, EEData.hostname);
       #endif
      
       snprintf (buffer, sizeof buffer, "Red %-3d Ban %-3d ", EEData.legalShown, EEData.totalBanned);
@@ -261,25 +294,19 @@ void DisplayOLEDStatus (void)
       yield ();
       #if defined (USE_LCD_DISPLAY)
          pad (buffer, sizeof buffer);
-         u8x8.drawString (0, 1, buffer);
+         drawString (0, 1, buffer);
       #endif
-
-      // #if defined (ESP8266)
-      //    snprintf (buffer, sizeof buffer, "Batt %-4d", ESP.getVcc());
-      //    Serial.println (buffer);
-      //    yield ();
-      //    #if defined (USE_LCD_DISPLAY)
-      //       pad (buffer, sizeof buffer);
-      //       u8x8.drawString (0, 2, buffer);
-      //    #endif
-      // #endif
 
       strftime (buffer, sizeof buffer, "%y-%m-%d %H:%M", gmtime (&EEData.lastActivity));
       Serial.println (buffer);
       yield ();
       #if defined (USE_LCD_DISPLAY)
          pad (buffer, sizeof buffer);
-         u8x8.drawString (0, 3, buffer);
+         drawString (0, 3, buffer);
+         #if defined (U8G2LIB_HH)
+            u8x8.sendBuffer ();
+            Serial.println ("sendBuffer");
+         #endif
       #endif
    }
 
@@ -312,22 +339,6 @@ void loop (void)
          ;
    }
    yield ();
-
-   // static int noStats = -1;
-   // if (noStats != WiFi.softAPgetStationNum())
-   // {
-   //    noStats = WiFi.softAPgetStationNum();
-   //    Serial.printf ("Connected devices: %d\n", noStats);
-   //    yield ();
-   // }
-
-   // unsigned long heap = ESP.getFreeHeap ();
-   // if (heap < prevHeap)
-   // {
-   //    Serial.printf("Free Heap: %lu Bytes\n", heap);
-   //    prevHeap = heap;
-   //    yield ();
-   // }
 
    #if defined (NOT_AP)
       if (connectRequired) 
