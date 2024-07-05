@@ -2,7 +2,7 @@
 
 //#define IDEA_SPARK // Define for IdeaSpark boards. Needed since they don't have their own board type.
 
-#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK)
+#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK) || defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
    #define USE_LCD_DISPLAY
    // #define USE_U8G2 // Define if you want to use the G2 version of the libraries. Pointless really. 
 #endif
@@ -48,6 +48,9 @@ char lastPageReq[512];
    #elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
       // Heltec WiFi Kit 32
       U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+
+   #elif defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
+      U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 18, /* data=*/ 17, /* reset=*/ 21);
    
    #elif defined (IDEA_SPARK)
       #if defined (U8G2LIB_HH)
@@ -102,6 +105,7 @@ void setup (void)
    Serial.begin (115200);                           // full speed to monitor
    delay(2000);
    Serial.println ("\n\n\n");
+   Serial.println (ARDUINO_BOARD);
 
    memset (lastPageReq, 0, sizeof lastPageReq);
 #if defined (USE_LCD_DISPLAY)
@@ -255,7 +259,7 @@ void drawString (int x, int y, const char *s)
    #if defined (U8G2LIB_HH)
       u8x8.drawStr (8*x+8, 8*y+8, s);
 //      u8x8.sendBuffer ();
-   #else
+   #elif defined (U8X8LIB_HH)
       u8x8.drawString (x, y, s);
    #endif
 }
