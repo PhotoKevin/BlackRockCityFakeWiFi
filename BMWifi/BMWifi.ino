@@ -2,7 +2,7 @@
 
 //#define IDEA_SPARK // Define for IdeaSpark boards. Needed since they don't have their own board type.
 
-#if defined (ARDUINO_HELTEC_WIFI_KIT_32) || defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK) || defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
+#if defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK) || defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
    #define USE_LCD_DISPLAY
    // #define USE_U8G2 // Define if you want to use the G2 version of the libraries. Pointless really. 
 #endif
@@ -43,11 +43,6 @@ char lastPageReq[512];
       #else
          U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(/* reset=*/ 16);
       #endif
-
-
-   #elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
-      // Heltec WiFi Kit 32
-      U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
    #elif defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
       U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 18, /* data=*/ 17, /* reset=*/ 21);
@@ -284,9 +279,6 @@ void DisplayOLEDStatus (void)
       prevRedirects = EEData.legalShown;
       prevBanned = EEData.totalBanned;
       prevActivity = EEData.lastActivity;
-      // #if defined (U8G2LIB_HH)
-      //    u8x8.setDrawColor (1);
-      // #endif
 
       char buffer[17];
       #if defined (USE_LCD_DISPLAY)
