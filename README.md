@@ -7,13 +7,12 @@ Finally they get told that "Dorking around on the Internet" is against the princ
 
 
 ## Development Environment
-I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the LCD display on a Heltec WiFi Kit 32 or WiFi Kit 8. and some generic ESP32 Devkit. The Heltec boards are nice in that they have a built in display and can run
-off of either USB or a LiPo battery and can charge the battery from USB.
+I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the LCD display on a Heltec WiFi Kit 32 (V3) or WiFi Kit 8. The Heltec boards are nice in that they have a built in display and can run off of either USB or a LiPo battery and can charge the battery from USB.
 
 The web pages were created with the [Pulsar](https://pulsar-edit.dev) editor. A small C program is then used to convert the
 pages into data stored in the main flash memory. The C program was developed in Visual Studio 2019.
 
-[WiFi Kit 32](https://heltec.org/project/wifi-kit-32/)  
+[WiFi Kit 32 (V3)](https://heltec.org/project/wifi-kit32-v3/)  
 [WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)  
 [Wemos D1](https://www.wemos.cc/en/latest/d1/index.html)  
 [IdeaSpark ESP32](https://www.amazon.com/s?k=ideaspark)
@@ -44,9 +43,9 @@ https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/pack
 - Now go to the Library Manager (left column, third icon from the top) and install
     - ArduionJson by Benoit Blanchon. 7.0.4
     - ESPAsyncWebSrv by dvarrel 1.2.7
-    - AsyncTCP by dvarrel - Will be auto installed by above
-    - ESPAsyncTCP by dvarrel - Will be auto installed by above
-    - U8g2 by oliver. 2.34.22 - If using one of the Heltec boards
+    - AsyncTCP by dvarrel - Should be auto installed by above
+    - ESPAsyncTCP by dvarrel - Should be auto installed by above
+    - U8g2 by oliver. 2.34.22 - If using one of the boards with an OLED display.
 
 - Plug your ESP board into a USB port.
 
