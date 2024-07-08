@@ -1,21 +1,28 @@
 # BlackRockCityFakeWiFi
 
 ## Purpose
-Create a joke WiFi access point for Black Rock City (aka Burning Man). The person trying to use the access point gets a huge page of Terms and Conditions. Once they agree, they are run through several sets of questions to "Prove they're not a robot".
+Create a joke WiFi access point for Black Rock City (aka Burning Man). The person trying to use the access point gets a huge list of Terms and Conditions in ever smaller font. Once they agree, they are run through some questions to "Prove they're not a robot".
 
 Finally they get told that "Dorking around on the Internet" is against the principle of Immediacy and are dumped.
 
+[![Terms and Conditions](Documentation/thumbnails/Terms_and_Conditions.png)](Documentation/Terms_and_Conditions.png)]
+[![Sample Question](Documentation/thumbnails/Question.png)](Documentation/Question.png)]
+[![Sample Question](Documentation/thumbnails/Banned.png)](Documentation/Banned.png)])
+
+
 
 ## Development Environment
-I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the LCD display on a Heltec WiFi Kit 32 (V3) or WiFi Kit 8. The Heltec boards are nice in that they have a built in display and can run off of either USB or a LiPo battery and can charge the battery from USB.
+I developed this on generic ESP8266 and ESP32 boards using the Arduino IDE. It also supports the OLED display on a Heltec WiFi Kit 32 (V3) or WiFi Kit 8. In addition to the OLED the Heltec boards are nice in that they can run off of either USB or a LiPo battery and can charge the battery from USB.
 
 The web pages were created with the [Pulsar](https://pulsar-edit.dev) editor. A small C program is then used to convert the
 pages into data stored in the main flash memory. The C program was developed in Visual Studio 2019.
 
-[WiFi Kit 32 (V3)](https://heltec.org/project/wifi-kit32-v3/)  
-[WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)  
-[Wemos D1](https://www.wemos.cc/en/latest/d1/index.html)  
-[IdeaSpark ESP32](https://www.amazon.com/s?k=ideaspark)
+Boards that I have tested on are:
+
+- [Heltec WiFi Kit 32 (V3)](https://heltec.org/project/wifi-kit32-v3/)  
+- [Heltec WiFi Kit 8](https://heltec.org/project/wifi-kit-8/)  
+- [LOLIN (Wemos) D1 R1](https://www.wemos.cc/en/latest/d1/index.html)  
+- [IdeaSpark ESP32](https://www.amazon.com/s?k=ideaspark)
 
 
 ## Captive Portal
@@ -28,10 +35,11 @@ implement this.
 ## Building the project
 I'm using the Arduino 2.3.2 IDE.
 
-- After installing the IDE go to the preferences (Control-Comma) and add an Additional Board Manager URLs of
-https://arduino.esp8266.com/stable/package_esp8266com_index.json  
-https://espressif.github.io/arduino-esp32/package_esp32_index.json
-https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/package_heltec_esp32_index.json
+- After installing the IDE go to the preferences (Control-Comma) and add these Additional Board Manager URLs.
+
+- https://arduino.esp8266.com/stable/package_esp8266com_index.json  
+- https://espressif.github.io/arduino-esp32/package_esp32_index.json
+- https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/package_heltec_esp32_index.json
 
 - Exit and restart the IDE.
 
@@ -42,9 +50,9 @@ https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/pack
 
 - Now go to the Library Manager (left column, third icon from the top) and install
     - ArduionJson by Benoit Blanchon. 7.0.4
-    - ESPAsyncWebSrv by dvarrel 1.2.7
-    - AsyncTCP by dvarrel - Should be auto installed by above
-    - ESPAsyncTCP by dvarrel - Should be auto installed by above
+    - ESP Async WebServer by me-no-dev 3.0.6
+    - AsyncTCP by me-no-dev 3.1.4
+    - ESPAsyncTCP by dvarrel 1.2.4
     - U8g2 by oliver. 2.34.22 - If using one of the boards with an OLED display.
 
 - Plug your ESP board into a USB port.
@@ -53,22 +61,6 @@ https://github.com/Heltec-Aaron-Lee/WiFi_Kit_series/releases/download/3.0.0/pack
 
 - Lastly click on the Upload (right arrow) button to compile and install the software.
 
-- As of June 2024, the ESPAsyncWebSrv (1.2.4) is not compatible with other current libraries and will give errors
-like:
-
-    - &lt;path>\WebAuthentication.cpp:74:3: error: 'mbedtls_md5_starts_ret' was not declared in this scope; did you mean 'mbedtls_md5_starts'?
-    - &lt;path>\AsyncWebSocket.cpp:551:7: error: 'ets_printf' was not declared in this scope; did you mean 'vswprintf'?
-    - &lt;path>\ESPAsyncWebSrv\src\AsyncEventSource.cpp:188:7: error: 'ets_printf' was not declared in this scope; did you mean 'vswprintf'?
-
-- To fix this add the following to the top of those files:  
->   #define ets_printf log_e  <br>
-    #define mbedtls_md5_finish_ret mbedtls_md5_finish  <br>
-    #define mbedtls_md5_starts_ret mbedtls_md5_starts <br>
-    #define mbedtls_md5_update_ret mbedtls_md5_update  <br>
-    #define mbedtls_sha1_finish_ret  mbedtls_sha1_finish  <br>
-    #define mbedtls_sha1_starts_ret mbedtls_sha1_starts <br>
-    #define mbedtls_sha1_update_ret mbedtls_sha1_update  <br>
-
 
 ## Accessing the Status and Configuration Pages
 - Bring up the list of access points and find BRC Open WiFi.
@@ -76,6 +68,9 @@ like:
 - Find the sentence "The following are representative examples only and do not comprise a comprehensive list of illegal</a> uses:"
 - Click on the word "illegal".
 - Log in with the default credentials of admin/changeme (both are all lower case).
+
+[![Sample Question](Documentation/thumbnails/Status.png)](Documentation/Status.png)]
+[![Sample Question](Documentation/thumbnails/Settings.png)](Documentation/Settings.png)]
 
 
 ## Configuration Options

@@ -5,13 +5,13 @@
 
 #if defined (ESP32)
    #include <WiFi.h>
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 
 #elif defined (ESP8266)
    #include <ESP8266WiFi.h>
    #include <ESP8266mDNS.h>
    #include <ESPAsyncTCP.h>
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 #else
    #error Change your board type to an ESP32
 #endif
@@ -29,7 +29,7 @@ static char *getHeader (AsyncWebServerRequest *req, const char *headername, char
    header[0] = '\0';
    if (req->hasHeader (headername))
    {
-      AsyncWebHeader *hdr = req->getHeader (headername);
+      const AsyncWebHeader *hdr = req->getHeader (headername);
 
       str_copy (header, hdr->value().c_str(), headersize);
       strtrim (header);
@@ -291,7 +291,7 @@ static void handleLegal (AsyncWebServerRequest *req)
 static void getPostParameter (AsyncWebServerRequest *req, const char *name, char *value, size_t valsize)
 {
    value[0] = '\0';
-   AsyncWebParameter *parameter = req->getParam (name, true, false);
+   const AsyncWebParameter *parameter = req->getParam (name, true, false);
    if (parameter != nullptr)
       str_copy (value, parameter->value().c_str(), valsize);
 }

@@ -5,13 +5,13 @@
 
 #if defined (ESP32)
    #include "WiFi.h"
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
    #include <esp_system.h>
    #include "esp_chip_info.h"
 
 #elif defined (ESP8266)
    #include <ESP8266WiFi.h>
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 #else
    #error Change your board type to an ESP32
 #endif

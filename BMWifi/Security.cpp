@@ -4,11 +4,11 @@
 #include <time.h>
 
 #if defined (ESP32)
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
    #include "esp_wifi.h"
    #include "esp_wifi_ap_get_sta_list.h"
 #elif defined (ESP8266)
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 #else
    #error Change your board type to an ESP32
 #endif

@@ -58,7 +58,7 @@ extern const char settings_html[];
 extern const char settings_js[];
 extern const char login_html[];
 
-#if defined (_ESPAsyncWebSrv_H_)
+#if defined (_ESPAsyncWebSrv_H_) || defined (_ESPAsyncWebServer_H_)
    uint64_t clientAddress (AsyncWebServerRequest *req);
    bool isLoggedIn (AsyncWebServerRequest *req);
    String getSettings (AsyncWebServerRequest *req);

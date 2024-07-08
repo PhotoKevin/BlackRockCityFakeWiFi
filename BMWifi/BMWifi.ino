@@ -14,12 +14,12 @@
 #if defined (ESP32)
    #include <WiFi.h>
    #include <ESPmDNS.h>
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 #elif defined (ESP8266)
    #include <ESP8266WiFi.h>
    #include <ESP8266mDNS.h>
    #include <ESPAsyncTCP.h>
-   #include <ESPAsyncWebSrv.h>
+   #include <ESPAsyncWebServer.h>
 #else
    #error Change your board type to an ESP32
 #endif
