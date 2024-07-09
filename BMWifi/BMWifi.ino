@@ -12,10 +12,13 @@
 #include <EEPROM.h>
 #include <Ticker.h>
 #if defined (ESP32)
+   #include <esp_wifi.h>
    #include <WiFi.h>
    #include <ESPmDNS.h>
    #include <ESPAsyncWebServer.h>
 #elif defined (ESP8266)
+
+   #include "ets_sys.h"
    #include <ESP8266WiFi.h>
    #include <ESP8266mDNS.h>
    #include <ESPAsyncTCP.h>
@@ -103,19 +106,16 @@ void setup (void)
    Serial.println (ARDUINO_BOARD);
 
    memset (lastPageReq, 0, sizeof lastPageReq);
-#if defined (USE_LCD_DISPLAY)
-   Serial.println ("Setting up LCD");
-   u8x8.begin();
-   u8x8.setPowerSave(0);
-   //u8x8.setContrast (0x7f);
-   //u8x8.setDrawColor (0);
-   #if defined (U8G2LIB_HH)
-      u8x8.setFont (u8g2_font_chroma48medium8_8r);
-   #else
-      u8x8.setFont (u8x8_font_chroma48medium8_r);
+   #if defined (USE_LCD_DISPLAY)
+      Serial.println ("Setting up LCD");
+      u8x8.begin();
+      u8x8.setPowerSave(0);
+      #if defined (U8G2LIB_HH)
+         u8x8.setFont (u8g2_font_chroma48medium8_8r);
+      #else
+         u8x8.setFont (u8x8_font_chroma48medium8_r);
+      #endif
    #endif
-
-#endif
    Serial.print ("\nBMWifi Starting\n");
 
    EEPROM.begin (sizeof EEData); 
@@ -123,15 +123,23 @@ void setup (void)
    if (EEData.eepromDataSize != sizeof EEData)
    {
       Serial.println ("Setting default EEData values");
+      uint8_t *macaddr = getMacAddress ();
+      uint8_t lastMacOctet = macaddr[5];
+      if (lastMacOctet == 0)
+         lastMacOctet = 1;
+
       uint8_t ip[] = DEFAULT_IPADDRESS;
       uint8_t mask[] = DEFAULT_NETMASK;
       uint8_t master[] = DEFAULT_MASTER;
       memset (&EEData, 0, sizeof EEData);
       EEData.eepromDataSize = sizeof EEData;
-      str_copy (EEData.SSID, DEFAULT_SSID, sizeof EEData.SSID);
       str_copy (EEData.username, DEFAULT_ADMIN, sizeof EEData.username);
       str_copy (EEData.password, DEFAULT_PASSWORD, sizeof EEData.password);
-      str_copy (EEData.hostname, DEFAULT_HOSTNAME, sizeof EEData.hostname);
+
+      snprintf (EEData.SSID, sizeof EEData.SSID, "%s %d", DEFAULT_SSID, lastMacOctet);
+      snprintf (EEData.hostname, sizeof EEData.hostname, "%s %d", DEFAULT_HOSTNAME, lastMacOctet);
+      ip[3] = lastMacOctet % 0x7f;
+
       for (int i=0; i<4; i++)
       {
          EEData.ipAddress[i] = ip[i];
@@ -402,6 +410,26 @@ String  WiFiStatus (int s)
    case WL_DISCONNECTED: return "Disconnected";         // 7
    default: return "Unknown status";                    //
    }
+}
+
+uint8_t *getMacAddress ()
+{
+   static uint8_t _macAddress[6];
+   #if defined (ESP8266)
+      wifi_get_macaddr (STATION_IF, _macAddress);
+   #elif defined (ESP32)
+
+      wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT ();
+      esp_wifi_init (&cfg);
+      esp_err_t rc = esp_wifi_get_mac (WIFI_IF_STA, _macAddress);
+      esp_wifi_deinit ();
+      Serial.printf ("rc = %x\n", rc);
+   #else
+      memset (_macAddress, 0, sizeof _macAddress);
+   #endif
+   Serial.printf ("%02x:%02x:%02x:%02x:%02x:%02x\n", _macAddress[0], _macAddress[1], _macAddress[2], _macAddress[3], _macAddress[4], _macAddress[5]);
+
+   return _macAddress;
 }
 
 static char localIPAddress[4*3+3+1] = "";
