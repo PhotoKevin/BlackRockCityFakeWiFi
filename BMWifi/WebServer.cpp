@@ -124,7 +124,7 @@ void setClock (const char *timestamp)
       int hour, minute, second;
 
       Serial.printf ("setClock (\"%s\")\n", timestamp);
-      int n = sscanf (timestamp, "%04d-0%02d-%02dT%02d:%02d:%02d", &year, &month, &day, &hour, &minute, &second);
+      int n = sscanf (timestamp, "%04d-%02d-%02dT%02d:%02d:%02d", &year, &month, &day, &hour, &minute, &second);
       if (n == 6)
       {
          struct tm newtime;
@@ -186,10 +186,12 @@ static void sendHtml (AsyncWebServerRequest *req, const char *txt)
    Serial.printf ("SendHtml %s -> %s (%s)\n", lastPageReq, clientIP.toString ().c_str (), allowed ? "allowed" : "not allowed");
    sendHeaders (req);
 
+   Serial.println ("Headers done");
    if (allowed)
       req->send (200, "text/html", txt);
    else
       req->send (200, "text/html", banned_html);
+   Serial.println ("<--sendHtml");
 }
 
 static void sendJs (AsyncWebServerRequest *req, const char *txt)
@@ -209,6 +211,7 @@ static void sendCss (AsyncWebServerRequest *req, const char *txt)
 
    sendHeaders (req);
    req->send (200, "text/css", txt);
+   Serial.println ("<--SendCss");
 }
 
 static int  send302 (AsyncWebServerRequest *req, const char *page)
@@ -286,6 +289,7 @@ static void handleLegal (AsyncWebServerRequest *req)
       EEData.lastActivity = time (NULL);
    EEChanged = 1;
    sendHtml (req, legal_html);
+   Serial.println ("<-handleLegal");
 }
 
 static void getPostParameter (AsyncWebServerRequest *req, const char *name, char *value, size_t valsize)

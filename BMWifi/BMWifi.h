@@ -24,6 +24,7 @@ struct eeprom_data_t
    uint8_t ipAddress[4];
    uint8_t netmask[4];
    uint8_t playSound;
+   uint8_t displayTimeoutSeconds;
    char lastUnknownUserAgent[200];
 };
 

@@ -2,7 +2,7 @@
 
 //#define IDEA_SPARK // Define for IdeaSpark boards. Needed since they don't have their own board type.
 
-#if defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK) || defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
+#if defined (ARDUINO_wifi_kit_8) || defined (IDEA_SPARK) || defined (ARDUINO_HELTEC_WIFI_KIT_32_V3) || defined (ARDUINO_HELTEC_WIFI_KIT_32)
    #define USE_LCD_DISPLAY
    // #define USE_U8G2 // Define if you want to use the G2 version of the libraries. Pointless really. 
 #endif
@@ -49,7 +49,10 @@ char lastPageReq[512];
 
    #elif defined (ARDUINO_HELTEC_WIFI_KIT_32_V3)
       U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 18, /* data=*/ 17, /* reset=*/ 21);
-   
+
+   #elif defined (ARDUINO_HELTEC_WIFI_KIT_32)
+      U8X8_SSD1306_128X64_NONAME_SW_I2C u8x8(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+
    #elif defined (IDEA_SPARK)
       #if defined (U8G2LIB_HH)
          U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8x8 (U8G2_R0, 22, 21, U8X8_PIN_NONE);
@@ -109,7 +112,7 @@ void setup (void)
    #if defined (USE_LCD_DISPLAY)
       Serial.println ("Setting up LCD");
       u8x8.begin();
-      u8x8.setPowerSave(0);
+      u8x8.setPowerSave (0);
       #if defined (U8G2LIB_HH)
          u8x8.setFont (u8g2_font_chroma48medium8_8r);
       #else
@@ -135,6 +138,7 @@ void setup (void)
       EEData.eepromDataSize = sizeof EEData;
       str_copy (EEData.username, DEFAULT_ADMIN, sizeof EEData.username);
       str_copy (EEData.password, DEFAULT_PASSWORD, sizeof EEData.password);
+      EEData.displayTimeoutSeconds = 90;
 
       snprintf (EEData.SSID, sizeof EEData.SSID, "%s %d", DEFAULT_SSID, lastMacOctet);
       snprintf (EEData.hostname, sizeof EEData.hostname, "%s %d", DEFAULT_HOSTNAME, lastMacOctet);
@@ -277,6 +281,7 @@ void drawString (int x, int y, const char *s)
 char prevLastPageReq[512];
 void DisplayOLEDStatus (void)
 {
+   static time_t lastDisplayUpdate = 0;
    static time_t prevActivity = 0;
    static int prevRedirects = -1;
    static int prevBanned = -1;
@@ -284,6 +289,10 @@ void DisplayOLEDStatus (void)
    // Work out if we need to refresh the display. Do it as a batch so the serial output is all or nothing
    if (prevRedirects != EEData.legalShown || prevBanned != EEData.totalBanned || prevActivity != EEData.lastActivity)
    {
+      #if defined (U8G2LIB_HH)
+         u8x8.setPowerSave (0);
+      #endif
+      (void) time (&lastDisplayUpdate);
       prevRedirects = EEData.legalShown;
       prevBanned = EEData.totalBanned;
       prevActivity = EEData.lastActivity;
@@ -324,6 +333,10 @@ void DisplayOLEDStatus (void)
 
    #if defined (USE_LCD_DISPLAY)
       u8x8.refreshDisplay();    // only required for SSD1606/7  
+
+      time_t now = time (NULL);
+      if ((EEData.displayTimeoutSeconds > 0) && difftime (now, lastDisplayUpdate) > EEData.displayTimeoutSeconds)
+         u8x8.setPowerSave (1);
    #endif
 }
 
